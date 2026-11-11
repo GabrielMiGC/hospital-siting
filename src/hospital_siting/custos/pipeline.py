@@ -130,7 +130,7 @@ def run(cfg: Config) -> None:
         vinculos, ano_rais = _rais(cfg, _cbos(equipe))
         salarios = rais.salarios(vinculos, _cbos(equipe), cfg.cod_uf, ano_rais)
 
-        custos = pd.concat([custo_sinapi, custo_cub], ignore_index=True)
+        custos = pd.concat([d for d in (custo_sinapi, custo_cub) if not d.empty], ignore_index=True)
         custos = validate(cfg, CUSTO_OBRA_M2, custos, "custo_obra_m2")
         equipamentos = validate(cfg, EQUIPAMENTO_AMBIENTE, equipamentos, "equipamento_ambiente")
         salarios = validate(cfg, SALARIO_OCUPACAO, salarios, "salario_ocupacao")
