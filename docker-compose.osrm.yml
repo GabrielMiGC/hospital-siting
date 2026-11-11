@@ -1,0 +1,14 @@
+services:
+  osrm:
+    image: osrm/osrm-backend
+    container_name: hs-osrm
+    command: osrm-routed --algorithm mld --max-table-size 10000 /data/mapa.osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/osrm:/data:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/5000"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
