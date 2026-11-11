@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS gold.fluxo_internacoes (
     tipo_leito           text NOT NULL,
     internacoes          integer NOT NULL,
     valor_total          numeric(16,2) NOT NULL,
+    n_competencias       integer NOT NULL,  -- meses do ano presentes na janela SIH
     PRIMARY KEY (cod_ibge_residencia, cod_ibge_ocorrencia, ano, tipo_leito)
 );
 

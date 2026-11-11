@@ -27,10 +27,15 @@ def _fontes(cfg: Config) -> list[dict]:
         if not entradas:
             continue
         hosts = sorted({urlparse(e["url"]).netloc for e in entradas})
-        linhas.append({
-            "fonte": m.parent.name, "arquivos": len(entradas), "refs": sorted({e["ref"] for e in entradas}),
-            "em": max(e["coletado_em"] for e in entradas)[:10], "hosts": hosts,
-        })
+        linhas.append(
+            {
+                "fonte": m.parent.name,
+                "arquivos": len(entradas),
+                "refs": sorted({e["ref"] for e in entradas}),
+                "em": max(e["coletado_em"] for e in entradas)[:10],
+                "hosts": hosts,
+            }
+        )
     return linhas
 
 
@@ -68,8 +73,10 @@ def render(cfg: Config, out: Path) -> Path:
     kpis = "".join(
         f"<div class='kpi'><b>{escape(str(valor))}</b><span>{escape(rotulo)}</span></div>"
         for valor, rotulo in (
-            (municipios, "municípios"), (len(fontes) or "—", "fontes coletadas"),
-            (f"{n_ok}/{len(ultimas)}" if ultimas else "—", "checagens aprovadas"), (data_base, "data-base monetária"),
+            (municipios, "municípios"),
+            (len(fontes) or "—", "fontes coletadas"),
+            (f"{n_ok}/{len(ultimas)}" if ultimas else "—", "checagens aprovadas"),
+            (data_base, "data-base monetária"),
         )
     )
     html = (

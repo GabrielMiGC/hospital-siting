@@ -132,3 +132,11 @@ def crawl_ambientes(cfg: Config, ambientes: list[str], client: Any) -> pd.DataFr
         if not frame.empty:
             frames.append(frame)
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
+def mes_referencia(nome_aba: str) -> str | None:
+    """'Renem 03_03_26' → '2026-03' (data de referência dos valores sugeridos)."""
+    import re
+
+    m = re.search(r"(\d{2})_(\d{2})_(\d{2})", nome_aba)
+    return f"20{m.group(3)}-{m.group(2)}" if m else None

@@ -74,7 +74,7 @@ SINAPI_SIDRA = "https://apisidra.ibge.gov.br/values/t/2296/n3/{cod_uf}/v/48/p/la
 
 def _sinapi(cfg: Config) -> pd.DataFrame:
     url = SINAPI_SIDRA.format(cod_uf=cfg.cod_uf)
-    arq = fetch_to_raw(cfg, "sinapi", "sidra2296", url, "sidra_2296.json")
+    arq = fetch_to_raw(cfg, "sinapi", "sidra2296", url, "sidra_2296.json", max_idade_dias=30)
     linhas = pd.DataFrame(json.loads(arq.path.read_text(encoding="utf-8"))[1:])
     write_parquet(linhas, bronze_path(cfg, "sinapi", "sidra2296"))
     return sinapi.de_sidra(linhas)
@@ -121,10 +121,12 @@ def run(cfg: Config) -> None:
         custo_cub = _cub(cfg, mes)
 
         renem_url = str(cfg.params.get("renem_url", RENEM_URL))
-        arq_renem = fetch_to_raw(cfg, "renem", "atual", renem_url, "lista-renem.xlsx")
+        arq_renem = fetch_to_raw(cfg, "renem", "atual", renem_url, "lista-renem.xlsx", max_idade_dias=30)
+        aba = pd.ExcelFile(arq_renem.path).sheet_names[0]
+        mes_renem = renem.mes_referencia(aba) or mes
         lista_renem = renem.parse_lista(pd.read_excel(arq_renem.path, header=None))
         write_parquet(lista_renem, bronze_path(cfg, "renem", "lista"))
-        equipamentos = renem.de_seed(_csv(cfg.seeds_dir / "equipamentos_ambiente.csv"), lista_renem, mes)
+        equipamentos = renem.de_seed(_csv(cfg.seeds_dir / "equipamentos_ambiente.csv"), lista_renem, mes_renem)
 
         equipe = _csv(cfg.seeds_dir / "dimensionamento_equipe.csv")
         vinculos, ano_rais = _rais(cfg, _cbos(equipe))

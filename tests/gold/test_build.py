@@ -99,3 +99,8 @@ def test_custo_obra_uma_linha_por_padrao_mes_mais_recente(cfg_fixture):
                   silver_path(cfg_fixture, "custo_obra_m2"))
     obra = tabelas_gold(cfg_fixture)["custo_obra_m2"]
     assert len(obra) == 1 and obra.iloc[0].mes_origem == "2026-09" and obra.iloc[0].valor_m2 == pytest.approx(2000.0)
+
+
+def test_fluxo_internacoes_informa_meses_por_ano(cfg_fixture):
+    f = tabelas_gold(cfg_fixture)["fluxo_internacoes"]
+    assert (f.n_competencias == 1).all()  # fixture: só 2024-12

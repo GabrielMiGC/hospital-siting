@@ -40,3 +40,20 @@ def test_parquet_roundtrip_and_paths(cfg_tmp):
     df = pd.DataFrame({"a": [1, 2]})
     write_parquet(df, p)
     assert read_parquet(p).equals(df)
+
+
+def test_fetch_to_raw_refaz_quando_cache_velho(cfg_tmp, respx_mock):
+    import json
+    from datetime import UTC, datetime, timedelta
+
+    route = respx_mock.get("http://u/serie.json").respond(200, content=b"v1")
+    fetch_to_raw(cfg_tmp, "indices", "ipca", "http://u/serie.json", "serie.json", max_idade_dias=30)
+    m = cfg_tmp.data_dir / "raw/indices/manifest.jsonl"
+    e = json.loads(m.read_text())
+    e["coletado_em"] = (datetime.now(UTC) - timedelta(days=40)).isoformat()
+    m.write_text(json.dumps(e) + "\n")
+    route.respond(200, content=b"v2")
+    novo = fetch_to_raw(cfg_tmp, "indices", "ipca", "http://u/serie.json", "serie.json", max_idade_dias=30)
+    assert route.call_count == 2 and novo.path.read_bytes() == b"v2"
+    fetch_to_raw(cfg_tmp, "indices", "ipca", "http://u/serie.json", "serie.json", max_idade_dias=30)
+    assert route.call_count == 2

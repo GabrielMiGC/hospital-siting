@@ -15,10 +15,22 @@ GEOM_COLS = {
     "estabelecimentos_hospitalares": {"geom": "Point"},
 }
 ORDEM = [
-    "dim_municipio", "leitos_existentes", "estabelecimentos_hospitalares", "necessidade_leitos_param",
-    "deficit_leitos", "fluxo_internacoes", "valor_medio_internacao", "matriz_tempo_viagem", "custo_obra_m2",
-    "equipamento_ambiente", "dimensionamento_equipe_param", "salario_ocupacao", "indice_correcao",
-    "consorcio_param", "custeio_param", "arquetipo_leitos",
+    "dim_municipio",
+    "leitos_existentes",
+    "estabelecimentos_hospitalares",
+    "necessidade_leitos_param",
+    "deficit_leitos",
+    "fluxo_internacoes",
+    "valor_medio_internacao",
+    "matriz_tempo_viagem",
+    "custo_obra_m2",
+    "equipamento_ambiente",
+    "dimensionamento_equipe_param",
+    "salario_ocupacao",
+    "indice_correcao",
+    "consorcio_param",
+    "custeio_param",
+    "arquetipo_leitos",
 ]
 
 

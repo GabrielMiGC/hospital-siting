@@ -19,7 +19,9 @@ def _ddl() -> str:
 
 
 def aplicar_ddl(engine: Engine) -> None:
+    # gold e meta são regenerados por inteiro a cada carga: recriar garante o DDL da versão atual
     with engine.begin() as c:
+        c.exec_driver_sql("DROP SCHEMA IF EXISTS gold CASCADE; DROP SCHEMA IF EXISTS meta CASCADE")
         c.exec_driver_sql(_ddl())
 
 
@@ -39,7 +41,8 @@ def verificar(engine: Engine) -> list[str]:
             c.exec_driver_sql(f"DROP SCHEMA IF EXISTS {tmp} CASCADE")
             c.exec_driver_sql(f"CREATE SCHEMA {tmp}")
             corpo = "\n".join(
-                ln.split("--")[0] for ln in ddl.splitlines()
+                ln.split("--")[0]
+                for ln in ddl.splitlines()
                 if not ln.strip().upper().startswith(("CREATE SCHEMA", "CREATE EXTENSION", "--"))
             )
             c.exec_driver_sql(_so_schema(corpo, schema, tmp))

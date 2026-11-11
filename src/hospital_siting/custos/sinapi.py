@@ -51,7 +51,7 @@ def de_sidra(linhas: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame(
         {
             "fonte": "SINAPI",
-            "padrao": "Custo médio m² SINAPI (IBGE/Caixa, média da UF)",
+            "padrao": "Custo médio m² SINAPI (IBGE/Caixa, média residencial da UF; NÃO é custo hospitalar)",
             "valor_m2": dados["valor_m2"].astype(float),
             "mes": mes,
         }

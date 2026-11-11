@@ -39,12 +39,7 @@ def two_step_fca(
     origens_tempo = origem_idx.get_indexer(tempo["origem"])
     destinos_tempo = destino_idx.get_indexer(tempo["destino"])
     minutos = pd.to_numeric(tempo["minutos"], errors="coerce").to_numpy()
-    validos = (
-        (origens_tempo >= 0)
-        & (destinos_tempo >= 0)
-        & ~np.isnan(minutos)
-        & (minutos <= t_max)
-    )
+    validos = (origens_tempo >= 0) & (destinos_tempo >= 0) & ~np.isnan(minutos) & (minutos <= t_max)
     alcanca[origens_tempo[validos], destinos_tempo[validos]] = True
 
     # A origem sempre conta com tempo zero, mesmo se a diagonal não foi fornecida.
@@ -91,25 +86,19 @@ def deficit(
     coluna local é mantida separadamente para permitir a leitura do resultado.
     """
     tipos = necessidade["tipo_leito"].drop_duplicates()
-    base = pd.MultiIndex.from_product(
-        [demanda["cod_ibge"], tipos], names=["cod_ibge", "tipo_leito"]
-    ).to_frame(index=False)
-
-    taxas = necessidade.groupby("tipo_leito", sort=False, as_index=False)[
-        "leitos_por_mil_hab"
-    ].sum()
-    base = base.merge(demanda[["cod_ibge", "populacao"]], on="cod_ibge", how="left")
-    base = base.merge(taxas, on="tipo_leito", how="left")
-    base["necessidade"] = (
-        base["populacao"] * base["leitos_por_mil_hab"].fillna(0) / 1_000
+    base = pd.MultiIndex.from_product([demanda["cod_ibge"], tipos], names=["cod_ibge", "tipo_leito"]).to_frame(
+        index=False
     )
 
-    local = oferta_local.groupby(
-        ["cod_ibge", "tipo_leito"], sort=False, as_index=False
-    )["existente_local_sus"].sum()
-    acessivel = oferta_acessivel.groupby(
-        ["cod_ibge", "tipo_leito"], sort=False, as_index=False
-    )["oferta_acessivel"].sum()
+    taxas = necessidade.groupby("tipo_leito", sort=False, as_index=False)["leitos_por_mil_hab"].sum()
+    base = base.merge(demanda[["cod_ibge", "populacao"]], on="cod_ibge", how="left")
+    base = base.merge(taxas, on="tipo_leito", how="left")
+    base["necessidade"] = base["populacao"] * base["leitos_por_mil_hab"].fillna(0) / 1_000
+
+    local = oferta_local.groupby(["cod_ibge", "tipo_leito"], sort=False, as_index=False)["existente_local_sus"].sum()
+    acessivel = oferta_acessivel.groupby(["cod_ibge", "tipo_leito"], sort=False, as_index=False)[
+        "oferta_acessivel"
+    ].sum()
     acessivel = acessivel.rename(columns={"oferta_acessivel": "oferta_acessivel_sus"})
 
     base = base.merge(local, on=["cod_ibge", "tipo_leito"], how="left")

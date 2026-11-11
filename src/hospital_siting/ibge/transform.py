@@ -22,9 +22,7 @@ def _nome_e_uf(nome: pd.Series) -> tuple[pd.Series, pd.Series]:
     return partes[0].astype(str), partes[1].astype(str)
 
 
-def sidra_to_municipio(
-    pop_raw: pd.DataFrame, pib_raw: pd.DataFrame, cod_uf: str
-) -> pd.DataFrame:
+def sidra_to_municipio(pop_raw: pd.DataFrame, pib_raw: pd.DataFrame, cod_uf: str) -> pd.DataFrame:
     """Combina população e PIB municipais devolvidos pela API SIDRA."""
     pop = pop_raw.loc[pop_raw["D1C"].astype(str).str.startswith(str(cod_uf))].copy()
     pop["valor"] = pop["V"].map(parse_ibge_number)
@@ -53,9 +51,7 @@ def sidra_to_municipio(
     out = municipio.merge(pib, on="cod_ibge", how="left", validate="one_to_one")
     out["pib"] = out["pib"].astype(float)
     out["ano_pib"] = out["ano_pib"].astype(int)
-    return out[
-        ["cod_ibge", "nome", "uf", "populacao", "ano_populacao", "pib", "ano_pib"]
-    ]
+    return out[["cod_ibge", "nome", "uf", "populacao", "ano_populacao", "pib", "ano_pib"]]
 
 
 def _sirgas(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -68,9 +64,7 @@ def _multipolygon(geometria: object) -> object:
     return MultiPolygon([geometria]) if isinstance(geometria, Polygon) else geometria
 
 
-def geo_to_municipio_geo(
-    limites: gpd.GeoDataFrame, sedes: gpd.GeoDataFrame
-) -> gpd.GeoDataFrame:
+def geo_to_municipio_geo(limites: gpd.GeoDataFrame, sedes: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Une limites e sedes municipais no contrato GeoParquet da silver."""
     lim = _sirgas(limites)[["code_muni", "geometry"]].copy()
     sed = _sirgas(sedes)[["code_muni", "geometry"]].copy()
@@ -107,9 +101,7 @@ def _associar_poligono(
     if ausentes.any():
         pontos_m = candidatos.loc[ausentes, ["cod_ibge", "geometry"]].to_crs(3857)
         poligonos_m = poligonos[[*colunas, "geometry"]].to_crs(3857)
-        proximos = gpd.sjoin_nearest(pontos_m, poligonos_m, how="left").drop(
-            columns="index_right"
-        )
+        proximos = gpd.sjoin_nearest(pontos_m, poligonos_m, how="left").drop(columns="index_right")
         proximos = proximos.drop_duplicates("cod_ibge", keep="first").set_index("cod_ibge")
         base = candidatos.set_index("cod_ibge")
         base.loc[proximos.index, colunas] = proximos[colunas]
@@ -143,11 +135,7 @@ def regioes(
     if macros is not None and not macros.empty:
         macro = _sirgas(macros)
         coluna_codigo = next(
-            (
-                nome
-                for nome in ("code_health_macroregion", "code_health_marcroregion")
-                if nome in macro.columns
-            ),
+            (nome for nome in ("code_health_macroregion", "code_health_marcroregion") if nome in macro.columns),
             None,
         )
         if coluna_codigo is None:
@@ -156,11 +144,8 @@ def regioes(
         mapa = associados.set_index("cod_ibge")[coluna_codigo]
         out["cod_macrorregiao"] = out["cod_ibge"].map(mapa)
 
-    resultado = out[
-        ["cod_ibge", "cod_regiao_saude", "nome_regiao_saude", "cod_macrorregiao"]
-    ].copy()
+    resultado = out[["cod_ibge", "cod_regiao_saude", "nome_regiao_saude", "cod_macrorregiao"]].copy()
     for coluna in ("cod_ibge", "cod_regiao_saude", "nome_regiao_saude"):
         resultado[coluna] = resultado[coluna].astype(str)
     resultado["cod_macrorregiao"] = resultado["cod_macrorregiao"].astype("string")
     return REGIAO_SAUDE.validate(resultado, lazy=True)
-

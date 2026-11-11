@@ -170,6 +170,8 @@ def tabelas_gold(cfg: Config) -> dict[str, pd.DataFrame]:
     t["fluxo_internacoes"] = sih.groupby(
         ["cod_ibge_residencia", "cod_ibge_ocorrencia", "ano", "tipo_leito"], as_index=False
     ).agg(internacoes=("internacoes", "sum"), valor_total=("valor_total_corr", "sum"))
+    meses = sih.groupby("ano")["competencia"].nunique()
+    t["fluxo_internacoes"]["n_competencias"] = t["fluxo_internacoes"]["ano"].map(meses).astype(int)
     t["valor_medio_internacao"] = _valor_medio(sih)
 
     # Custos

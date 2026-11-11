@@ -53,3 +53,22 @@ def test_ler_vinculos_layout_2024_virgula_e_ponto_decimal(tmp_path):
     out = ler_vinculos(arq, "29", ["223505", "322205"])
     assert list(out.columns) == ["CBO Ocupação 2002", "Município", "Vl Remun Dezembro Nom"]
     assert sorted(out["Vl Remun Dezembro Nom"].tolist()) == [2200.0, 4500.5]
+
+
+def test_salario_normalizado_para_40h(tmp_path):
+    from hospital_siting.custos.rais import salarios
+
+    arq = tmp_path / "RAIS.COMT"
+    cab = '"CBO 2002 Ocupação - Código","Município - Código","Vl Rem Dezembro Nom","Qtd Hora Contr"'
+    linhas = ["225125,292740,4000.00,20", "225125,292740,7000.00,40", "225125,292740,9000.00,0"]
+    arq.write_bytes(("\n".join([cab, *linhas]) + "\n").encode("latin-1"))
+    vinc = ler_vinculos(arq, "29", ["225125"])
+    out = salarios(vinc, ["225125"], "29", 2024)
+    assert out.salario_medio.item() == pytest.approx(7500.0)  # 4000@20h→8000, 7000@40h; 0h descartado
+
+
+def test_renem_mes_referencia_da_aba():
+    from hospital_siting.custos.renem import mes_referencia
+
+    assert mes_referencia("Renem 03_03_26") == "2026-03"
+    assert mes_referencia("Planilha1") is None

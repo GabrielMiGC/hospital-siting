@@ -35,6 +35,10 @@ def salarios(rais_vinc: pd.DataFrame, cbos: list[str], cod_uf: str, ano: int) ->
     dados = dados.loc[filtro].copy()
     dados["_salario"] = pd.to_numeric(dados["_salario"], errors="coerce")
     dados = dados.loc[dados["_salario"].gt(0)]
+    if COL_HORAS in dados:  # normaliza para 40 h semanais; contratos sem horas são descartados
+        horas = pd.to_numeric(dados[COL_HORAS], errors="coerce")
+        dados = dados.loc[horas.gt(0)].copy()
+        dados["_salario"] = dados["_salario"] * 40 / horas[horas.gt(0)]
 
     descricoes = next(
         (col for col in ("CBO Ocupação 2002 - Descrição", "Descrição CBO", "descricao") if col in dados),
@@ -62,6 +66,7 @@ ALIASES = {
     COL_MUNICIPIO: ("Município", "Município - Código"),
     COL_REMUNERACAO: ("Vl Remun Dezembro Nom", "Vl Rem Dezembro Nom"),
 }
+COL_HORAS = "Qtd Hora Contr"
 
 
 def ler_vinculos(txt, cod_uf: str, cbos: list[str], chunksize: int = 500_000) -> pd.DataFrame:
@@ -77,11 +82,15 @@ def ler_vinculos(txt, cod_uf: str, cbos: list[str], chunksize: int = 500_000) ->
         if achada is None:
             raise ValueError(f"RAIS sem coluna {canonica} (aceitas: {nomes})")
         origem[achada] = canonica
+    if COL_HORAS in cab:
+        origem[COL_HORAS] = COL_HORAS
     alvo = {_codigo(c, 6) for c in cbos}
     partes = []
     leitor = pd.read_csv(txt, sep=sep, encoding="latin-1", dtype=str, usecols=list(origem), chunksize=chunksize)
     for bloco in leitor:
-        bloco = bloco.rename(columns=origem)[[COL_CBO, COL_MUNICIPIO, COL_REMUNERACAO]]
+        bloco = bloco.rename(columns=origem)[
+            [COL_CBO, COL_MUNICIPIO, COL_REMUNERACAO, *([COL_HORAS] if COL_HORAS in origem else [])]
+        ]
         mun = bloco[COL_MUNICIPIO].str.strip()
         cbo = bloco[COL_CBO].str.strip().map(lambda v: _codigo(v, 6))
         partes.append(bloco.loc[mun.str.startswith(str(cod_uf)) & cbo.isin(alvo)].assign(**{COL_CBO: cbo}))

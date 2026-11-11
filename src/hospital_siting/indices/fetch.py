@@ -15,11 +15,11 @@ _ZIP_RE = re.compile(r"TabelaUnificada_(\d{6})_v\d+\.zip")
 
 
 def fetch_ipca(cfg: Config) -> RawFile:
-    return fetch_to_raw(cfg, "ipca", "sidra_1737", SIDRA_URL, "sidra_1737.json")
+    return fetch_to_raw(cfg, "ipca", "sidra_1737", SIDRA_URL, "sidra_1737.json", max_idade_dias=30)
 
 
 def fetch_incc(cfg: Config) -> RawFile:
-    return fetch_to_raw(cfg, "incc", "sgs_192", SGS_INCC_URL, "sgs_192.json")
+    return fetch_to_raw(cfg, "incc", "sgs_192", SGS_INCC_URL, "sgs_192.json", max_idade_dias=30)
 
 
 def ultimo_sigtap_zip() -> tuple[str, str]:

@@ -43,8 +43,15 @@ def _ler_manifest(cfg: Config, fonte: str) -> list[dict]:
 
 
 def _from_entry(cfg: Config, e: dict, novo: bool) -> RawFile:
-    return RawFile(e["fonte"], e["ref"], cfg.data_dir / e["path"], e["sha256"], e["url"],
-                   datetime.fromisoformat(e["coletado_em"]), novo)
+    return RawFile(
+        e["fonte"],
+        e["ref"],
+        cfg.data_dir / e["path"],
+        e["sha256"],
+        e["url"],
+        datetime.fromisoformat(e["coletado_em"]),
+        novo,
+    )
 
 
 def save_raw(cfg: Config, fonte: str, ref: str, filename: str, content: bytes, url: str) -> RawFile:
@@ -61,9 +68,14 @@ def save_raw(cfg: Config, fonte: str, ref: str, filename: str, content: bytes, u
     destino.write_bytes(content)
 
     entry = {
-        "fonte": fonte, "ref": ref, "filename": filename,
-        "path": destino.relative_to(cfg.data_dir).as_posix(), "sha256": sha, "url": url,
-        "bytes": len(content), "coletado_em": datetime.now(UTC).isoformat(),
+        "fonte": fonte,
+        "ref": ref,
+        "filename": filename,
+        "path": destino.relative_to(cfg.data_dir).as_posix(),
+        "sha256": sha,
+        "url": url,
+        "bytes": len(content),
+        "coletado_em": datetime.now(UTC).isoformat(),
     }
     m = _manifest(cfg, fonte)
     m.parent.mkdir(parents=True, exist_ok=True)
@@ -87,12 +99,21 @@ def _baixar(url: str, client: httpx.Client | None) -> bytes:
 
 
 def fetch_to_raw(
-    cfg: Config, fonte: str, ref: str, url: str, filename: str, client: httpx.Client | None = None
+    cfg: Config,
+    fonte: str,
+    ref: str,
+    url: str,
+    filename: str,
+    client: httpx.Client | None = None,
+    max_idade_dias: int | None = None,
 ) -> RawFile:
     """Baixa `url` para raw, sem nova requisição se (ref, filename, url) já estiver no manifest."""
     for e in reversed(_ler_manifest(cfg, fonte)):
         if e["ref"] == ref and e["filename"] == filename and e["url"] == url and (cfg.data_dir / e["path"]).exists():
-            return _from_entry(cfg, e, novo=False)
+            idade = datetime.now(UTC) - datetime.fromisoformat(e["coletado_em"])
+            if max_idade_dias is None or idade.days < max_idade_dias:
+                return _from_entry(cfg, e, novo=False)
+            break
     return save_raw(cfg, fonte, ref, filename, _baixar(url, client), url)
 
 
