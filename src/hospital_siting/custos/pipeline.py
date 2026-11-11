@@ -97,16 +97,18 @@ def _rais(cfg: Config, cbos: list[str]) -> tuple[pd.DataFrame, int]:
         return pd.read_parquet(bronze), ano
     arq = fetch_to_raw(cfg, "rais", str(ano), url, Path(url).name)
     destino = arq.path.parent / "extraido"
-    if not any(destino.glob("*.txt")):
+    if not any(x.is_file() for x in destino.glob("*")):
         import py7zr
 
         destino.mkdir(parents=True, exist_ok=True)
         with py7zr.SevenZipFile(arq.path, "r") as z:
             z.extractall(destino)
-    partes = [rais.ler_vinculos(txt, cfg.cod_uf, cbos) for txt in sorted(destino.rglob("*.txt"))]
+    partes = [rais.ler_vinculos(txt, cfg.cod_uf, cbos) for txt in sorted(destino.rglob("*")) if txt.is_file()]
     vinc = pd.concat(partes, ignore_index=True)
     write_parquet(vinc, bronze)
-    for txt in destino.rglob("*.txt"):  # o .7z original fica em raw; o texto extraído (GBs) é descartável
+    for txt in [
+        x for x in destino.rglob("*") if x.is_file()
+    ]:  # o .7z original fica em raw; o texto extraído (GBs) é descartável
         txt.unlink()
     return vinc, ano
 

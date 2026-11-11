@@ -43,3 +43,13 @@ def test_ler_vinculos_sem_colunas_falha(tmp_path):
     txt.write_bytes(b"A;B\n1;2\n")
     with pytest.raises(ValueError):
         ler_vinculos(txt, "29", ["223505"])
+
+
+def test_ler_vinculos_layout_2024_virgula_e_ponto_decimal(tmp_path):
+    arq = tmp_path / "RAIS_VINC_PUB_NORDESTE.COMT"
+    cab = '"Bairros SP - Código","CBO 2002 Ocupação - Código","Município - Código","Vl Rem Dezembro Nom"'
+    linhas = ['999997,223505,292740,4500.50', '999997,223505,261160,9999.00', '999997,322205,291080,2200.00']
+    arq.write_bytes(("\n".join([cab, *linhas]) + "\n").encode("latin-1"))
+    out = ler_vinculos(arq, "29", ["223505", "322205"])
+    assert list(out.columns) == ["CBO Ocupação 2002", "Município", "Vl Remun Dezembro Nom"]
+    assert sorted(out["Vl Remun Dezembro Nom"].tolist()) == [2200.0, 4500.5]
