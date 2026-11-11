@@ -5,7 +5,7 @@ import httpx
 import numpy as np
 from shapely.geometry import box
 
-from hospital_siting.rotas.matriz import tabela_osrm
+from hospital_siting.rotas.matriz import para_long, poligono_buffer, tabela_osrm
 
 BASE_URL = "http://osrm:5000"
 OSRM_TABLE_URL = r"http://osrm:5000/table/v1/driving/.*"
