@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import time
+from pathlib import Path
 
 import geopandas as gpd
 import httpx
@@ -42,6 +43,37 @@ def _compose(*args: str) -> None:
     subprocess.run(["docker", "compose", "-f", str(COMPOSE), *args], check=True, cwd=REPO_ROOT)  # noqa: S603, S607
 
 
+def comandos_preparo(pbf: Path, poly: Path, out: Path) -> list[list[str]]:
+    """Mesmos passos do docker/osrm/prepare.sh, como `docker run` portáveis (sem bash; funciona no Windows)."""
+    recorte = [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{pbf.parent}:/in:ro",
+        "-v",
+        f"{poly.parent}:/poly:ro",
+        "-v",
+        f"{out}:/out",
+        "stefda/osmium-tool",
+        "osmium",
+        "extract",
+        "-p",
+        f"/poly/{poly.name}",
+        f"/in/{pbf.name}",
+        "-o",
+        "/out/mapa.osm.pbf",
+        "--overwrite",
+    ]
+    osrm = ["docker", "run", "--rm", "-v", f"{out}:/data", "osrm/osrm-backend"]
+    return [
+        recorte,
+        [*osrm, "osrm-extract", "-p", "/opt/car.lua", "/data/mapa.osm.pbf"],
+        [*osrm, "osrm-partition", f"/data/{OSRM_ARQ}"],
+        [*osrm, "osrm-customize", f"/data/{OSRM_ARQ}"],
+    ]
+
+
 def _preparar_grafo(cfg: Config, geo: gpd.GeoDataFrame) -> None:
     osrm_dir = cfg.data_dir / "osrm"
     osrm_dir.mkdir(parents=True, exist_ok=True)
@@ -53,7 +85,8 @@ def _preparar_grafo(cfg: Config, geo: gpd.GeoDataFrame) -> None:
     geom = json.loads(gpd.GeoSeries([poli]).to_json())["features"][0]["geometry"]
     poly_path = osrm_dir / "area.geojson"
     poly_path.write_text(json.dumps({"type": "Feature", "properties": {}, "geometry": geom}), encoding="utf-8")
-    subprocess.run(["bash", str(PREPARE), str(pbf), str(poly_path), str(osrm_dir)], check=True)  # noqa: S603, S607
+    for cmd in comandos_preparo(pbf.resolve(), poly_path.resolve(), osrm_dir.resolve()):
+        subprocess.run(cmd, check=True)  # noqa: S603, S607
 
 
 def run(cfg: Config) -> None:

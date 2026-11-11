@@ -102,3 +102,12 @@ def test_para_long_shape_and_diagonal():
 def test_poligono_buffer_grows():
     p = poligono_buffer(LIM_FIX, 50)
     assert p.area > LIM_FIX.to_crs(4326).union_all().area
+
+
+def test_comandos_preparo_sem_bash(tmp_path):
+    from hospital_siting.rotas.pipeline import comandos_preparo
+
+    cmds = comandos_preparo(tmp_path / "in" / "ne.osm.pbf", tmp_path / "osrm" / "area.geojson", tmp_path / "osrm")
+    assert len(cmds) == 4 and all(c[:3] == ["docker", "run", "--rm"] for c in cmds)
+    assert "bash" not in {x for c in cmds for x in c}
+    assert cmds[1][-4:] == ["osrm-extract", "-p", "/opt/car.lua", "/data/mapa.osm.pbf"]
