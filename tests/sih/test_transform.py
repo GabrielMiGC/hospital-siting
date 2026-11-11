@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from hospital_siting.sih.transform import agregar_rd
 
 from hospital_siting.core.ids import build_ibge6_map
 from hospital_siting.schemas.silver import SIH_AGG
+from hospital_siting.sih.transform import agregar_rd
 
 FIX = Path(__file__).parents[1] / "fixtures" / "sih"
 

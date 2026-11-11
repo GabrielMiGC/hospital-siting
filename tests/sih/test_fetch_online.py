@@ -1,5 +1,6 @@
 import httpx
 import pytest
+
 from hospital_siting.sih.fetch import competencias
 
 
