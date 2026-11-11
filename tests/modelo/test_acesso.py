@@ -3,8 +3,8 @@ import time
 import numpy as np
 import pandas as pd
 import pytest
-from hospital_siting.modelo.acesso import deficit, two_step_fca
 
+from hospital_siting.modelo.acesso import deficit, two_step_fca
 from hospital_siting.schemas.silver import TIPOS_LEITO
 
 
