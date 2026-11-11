@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -68,39 +69,64 @@ def _registrar_cobertura(cfg: Config, equipamentos: pd.DataFrame) -> None:
         )
 
 
-def run(cfg: Config) -> None:
-    """Baixa fontes configuradas e materializa as três silvers do domínio."""
-    try:
-        mes = _param(cfg, "custos_mes")
-        ano_rais = int(_param(cfg, "rais_ano"))
-        sinapi_url = _param(cfg, "sinapi_url")
-        arq_sinapi = fetch_to_raw(cfg, "sinapi", mes, sinapi_url, Path(sinapi_url).name or "sinapi.xlsx")
-        bruto_sinapi = pd.read_excel(arq_sinapi.path)
-        write_parquet(bruto_sinapi, bronze_path(cfg, "sinapi", f"custos-{mes}"))
-        custo_sinapi = sinapi.custo_m2(bruto_sinapi, cfg.uf, mes)
+SINAPI_SIDRA = "https://apisidra.ibge.gov.br/values/t/2296/n3/{cod_uf}/v/48/p/last%2024"
 
-        cub_seed = _csv(cfg.seeds_dir / "cub_ba.csv")
-        write_parquet(cub_seed, bronze_path(cfg, "cub", f"custos-{mes}"))
-        custo_cub = cub.custo_m2(cub_seed, mes)
-        warn_if(cfg, True, "custo_obra_m2", "cub_seed_manual", "CUB transcrito de fonte do Sinduscon")
+
+def _sinapi(cfg: Config) -> pd.DataFrame:
+    url = SINAPI_SIDRA.format(cod_uf=cfg.cod_uf)
+    arq = fetch_to_raw(cfg, "sinapi", "sidra2296", url, "sidra_2296.json")
+    linhas = pd.DataFrame(json.loads(arq.path.read_text(encoding="utf-8"))[1:])
+    write_parquet(linhas, bronze_path(cfg, "sinapi", "sidra2296"))
+    return sinapi.de_sidra(linhas)
+
+
+def _cub(cfg: Config, mes: str) -> pd.DataFrame:
+    seed = cfg.seeds_dir / "cub_ba.csv"
+    if not seed.exists():
+        warn_if(cfg, True, "custo_obra_m2", "cub_ausente", "seeds/cub_ba.csv não existe; só SINAPI")
+        return pd.DataFrame(columns=["fonte", "padrao", "valor_m2", "mes"])
+    warn_if(cfg, True, "custo_obra_m2", "cub_seed_manual", "CUB transcrito de fonte do Sinduscon")
+    return cub.custo_m2(_csv(seed), mes)
+
+
+def _rais(cfg: Config, cbos: list[str]) -> tuple[pd.DataFrame, int]:
+    ano = int(_param(cfg, "rais_ano"))
+    url = _param(cfg, "rais_url")
+    bronze = bronze_path(cfg, "rais", f"vinculos-{cfg.cod_uf}-{ano}")
+    if bronze.exists():
+        return pd.read_parquet(bronze), ano
+    arq = fetch_to_raw(cfg, "rais", str(ano), url, Path(url).name)
+    destino = arq.path.parent / "extraido"
+    if not any(destino.glob("*.txt")):
+        import py7zr
+
+        destino.mkdir(parents=True, exist_ok=True)
+        with py7zr.SevenZipFile(arq.path, "r") as z:
+            z.extractall(destino)
+    partes = [rais.ler_vinculos(txt, cfg.cod_uf, cbos) for txt in sorted(destino.rglob("*.txt"))]
+    vinc = pd.concat(partes, ignore_index=True)
+    write_parquet(vinc, bronze)
+    for txt in destino.rglob("*.txt"):  # o .7z original fica em raw; o texto extraído (GBs) é descartável
+        txt.unlink()
+    return vinc, ano
+
+
+def run(cfg: Config) -> None:
+    """Baixa as fontes reais e materializa as três silvers do domínio."""
+    try:
+        custo_sinapi = _sinapi(cfg)
+        mes = str(custo_sinapi["mes"].max())
+        custo_cub = _cub(cfg, mes)
 
         renem_url = str(cfg.params.get("renem_url", RENEM_URL))
-        arq_renem = fetch_to_raw(cfg, "renem", mes, renem_url, "lista-renem.xlsx")
-        bruto_renem = pd.read_excel(arq_renem.path, header=None)
-        lista_renem = renem.parse_lista(bruto_renem)
-        write_parquet(lista_renem, bronze_path(cfg, "renem", f"lista-{mes}"))
-        seed_equipamentos = _csv(cfg.seeds_dir / "equipamentos_ambiente.csv")
-        equipamentos = renem.de_seed(seed_equipamentos, lista_renem, mes)
+        arq_renem = fetch_to_raw(cfg, "renem", "atual", renem_url, "lista-renem.xlsx")
+        lista_renem = renem.parse_lista(pd.read_excel(arq_renem.path, header=None))
+        write_parquet(lista_renem, bronze_path(cfg, "renem", "lista"))
+        equipamentos = renem.de_seed(_csv(cfg.seeds_dir / "equipamentos_ambiente.csv"), lista_renem, mes)
 
-        rais_url = _param(cfg, "rais_url")
-        if Path(rais_url).suffix.lower() == ".7z":
-            raise RuntimeError("RAIS em .7z requer dependência não disponível; use fonte já extraída")
-        arq_rais = fetch_to_raw(cfg, "rais", str(ano_rais), rais_url, Path(rais_url).name or "rais.csv")
-        bruto_rais = _csv(arq_rais.path)
-        bruto_rais = bruto_rais.loc[bruto_rais[rais.COL_MUNICIPIO].astype(str).str.startswith(cfg.cod_uf)].copy()
-        write_parquet(bruto_rais, bronze_path(cfg, "rais", f"vinculos-{cfg.cod_uf}-{ano_rais}"))
         equipe = _csv(cfg.seeds_dir / "dimensionamento_equipe.csv")
-        salarios = rais.salarios(bruto_rais, _cbos(equipe), cfg.cod_uf, ano_rais)
+        vinculos, ano_rais = _rais(cfg, _cbos(equipe))
+        salarios = rais.salarios(vinculos, _cbos(equipe), cfg.cod_uf, ano_rais)
 
         custos = pd.concat([custo_sinapi, custo_cub], ignore_index=True)
         custos = validate(cfg, CUSTO_OBRA_M2, custos, "custo_obra_m2")
@@ -113,7 +139,7 @@ def run(cfg: Config) -> None:
         record_run(
             cfg,
             "custos",
-            "pass",
+            "ok",
             {"mes": mes, "ano_rais": ano_rais, "linhas": [len(custos), len(equipamentos), len(salarios)]},
         )
     except Exception as exc:

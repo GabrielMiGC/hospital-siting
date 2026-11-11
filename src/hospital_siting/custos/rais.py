@@ -55,3 +55,18 @@ def salarios(rais_vinc: pd.DataFrame, cbos: list[str], cod_uf: str, ano: int) ->
             "ano": int(ano),
         }
     )
+
+
+def ler_vinculos(txt, cod_uf: str, cbos: list[str], chunksize: int = 500_000) -> pd.DataFrame:
+    """Lê o .txt de vínculos da RAIS (';', latin-1) em blocos, mantendo só a UF e os CBOs pedidos."""
+    colunas = [COL_CBO, COL_MUNICIPIO, COL_REMUNERACAO]
+    cab = pd.read_csv(txt, sep=";", encoding="latin-1", nrows=0).columns
+    if faltantes := set(colunas) - set(cab):
+        raise ValueError(f"RAIS sem colunas: {sorted(faltantes)}")
+    alvo = {_codigo(c, 6) for c in cbos}
+    partes = []
+    for bloco in pd.read_csv(txt, sep=";", encoding="latin-1", dtype=str, usecols=colunas, chunksize=chunksize):
+        bloco = bloco[colunas]
+        filtro = bloco[COL_MUNICIPIO].str.strip().str.startswith(str(cod_uf)) & bloco[COL_CBO].str.strip().isin(alvo)
+        partes.append(bloco.loc[filtro])
+    return pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=colunas)

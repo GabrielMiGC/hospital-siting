@@ -40,3 +40,20 @@ def custo_m2(xls: pd.DataFrame, uf: str, mes: str) -> pd.DataFrame:
         }
     )
     return out.dropna(subset=["padrao", "valor_m2"]).reset_index(drop=True)
+
+
+def de_sidra(linhas: pd.DataFrame) -> pd.DataFrame:
+    """SINAPI via IBGE/SIDRA tabela 2296, variável 48 (custo médio m² em moeda corrente), linhas sem cabeçalho."""
+    dados = linhas.loc[linhas["D2C"].astype(str) == "48"].copy()
+    dados["valor_m2"] = pd.to_numeric(dados["V"], errors="coerce")
+    dados = dados.dropna(subset=["valor_m2"])
+    mes = dados["D3C"].astype(str).str[:4] + "-" + dados["D3C"].astype(str).str[4:6]
+    out = pd.DataFrame(
+        {
+            "fonte": "SINAPI",
+            "padrao": "Custo médio m² SINAPI (IBGE/Caixa, média da UF)",
+            "valor_m2": dados["valor_m2"].astype(float),
+            "mes": mes,
+        }
+    )
+    return out.sort_values("mes").reset_index(drop=True)
