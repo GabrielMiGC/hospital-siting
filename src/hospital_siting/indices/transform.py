@@ -46,3 +46,10 @@ def sigtap(layout: pd.DataFrame, linhas: list[str], competencia: str) -> pd.Data
             "competencia": competencia,
         }
     )
+
+
+def desde_incc(raw: pd.DataFrame, mes_inicio: str = "1995-01") -> pd.DataFrame:
+    """INCC encadeado só a partir de `mes_inicio` (padrão: pós-Real), evitando números-índice astronômicos
+    herdados da hiperinflação; as razões entre meses — as únicas usadas na correção — são idênticas."""
+    datas = pd.to_datetime(raw["data"], format="%d/%m/%Y")
+    return incc(raw.loc[datas >= pd.Timestamp(f"{mes_inicio}-01")].reset_index(drop=True))

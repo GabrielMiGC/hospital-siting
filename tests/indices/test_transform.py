@@ -54,3 +54,15 @@ def test_sigtap_fixed_width_layout_values_in_reais():
     assert out["valor_sp"].round(2).tolist() == [67.89, 250.0]
     assert set(out["competencia"]) == {"2026-09"}
     S.SIGTAP_PROCEDIMENTO.validate(out, lazy=True)
+
+
+def test_desde_corta_antes_do_real_e_preserva_razoes():
+    import pandas as pd
+
+    from hospital_siting.indices.transform import desde_incc
+
+    raw = pd.DataFrame({"data": ["01/12/1994", "01/01/1995", "01/02/1995", "01/03/1995"],
+                        "valor": ["40.0", "1.0", "0.5", "2.0"]})
+    out = desde_incc(raw, "1995-01")
+    assert out.mes.tolist() == ["1995-01", "1995-02", "1995-03"]
+    assert out.valor.round(4).tolist() == [100.0, 100.5, 102.51]

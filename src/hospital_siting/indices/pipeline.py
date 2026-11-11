@@ -37,7 +37,7 @@ def run(cfg: Config) -> None:
     f_incc = fetch.fetch_incc(cfg)
     raw_incc = pd.DataFrame(json.loads(f_incc.path.read_text(encoding="utf-8")))
     write_parquet(raw_incc, bronze_path(cfg, "indices", "incc_sgs"))
-    incc = transform.incc(raw_incc)
+    incc = transform.desde_incc(raw_incc, "1995-01")
 
     indice = validate(cfg, S.INDICE, pd.concat([ipca, incc], ignore_index=True), "indice")
     write_parquet(indice, silver_path(cfg, "indice"))
