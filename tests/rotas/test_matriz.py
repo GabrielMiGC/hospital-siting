@@ -86,3 +86,19 @@ def test_tabela_osrm_blocks_and_nulls(respx_mock):
     # metros coerentes com os segundos (mesmo par, mesma máscara de nulls)
     np.testing.assert_array_equal(valido, ~np.isnan(met))
     np.testing.assert_allclose(met[valido], seg[valido] * 10.0)
+
+
+def test_para_long_shape_and_diagonal():
+    out = para_long(
+        ["a" * 7, "b" * 7],
+        np.array([[0, 600], [660, 0]]),
+        np.array([[0, 10000], [11000, 0]]),
+    )
+    assert len(out) == 4
+    assert out.query("origem==destino").minutos_osrm.eq(0).all()
+    assert out.query("origem=='aaaaaaa' and destino=='bbbbbbb'").minutos_osrm.item() == 10.0
+
+
+def test_poligono_buffer_grows():
+    p = poligono_buffer(LIM_FIX, 50)
+    assert p.area > LIM_FIX.to_crs(4326).union_all().area
