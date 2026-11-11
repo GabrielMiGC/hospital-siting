@@ -1,7 +1,7 @@
 import pytest
-from hospital_siting.ibge.pipeline import run
 
 from hospital_siting.core.storage import read_parquet, silver_path
+from hospital_siting.ibge.pipeline import run
 
 
 @pytest.mark.online

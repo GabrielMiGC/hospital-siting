@@ -2,9 +2,9 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from hospital_siting.ibge.transform import geo_to_municipio_geo, regioes, sidra_to_municipio
 from shapely.geometry import MultiPolygon, Point, Polygon
 
+from hospital_siting.ibge.transform import geo_to_municipio_geo, regioes, sidra_to_municipio
 from hospital_siting.schemas.silver import MUNICIPIO, REGIAO_SAUDE
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "ibge"
