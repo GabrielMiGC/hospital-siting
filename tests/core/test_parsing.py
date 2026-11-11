@@ -28,3 +28,9 @@ def test_parse_ibge_number_values(s, exp):
 def test_read_dbf_latin1():
     df = read_dbf(FIXTURES / "dbf/acentos.dbf")
     assert df["NOME"].iloc[0] == "São Félix"
+
+
+def test_read_dbf_sem_terminador_de_cabecalho():
+    # DBFs descomprimidos do DATASUS às vezes trazem 0x00 no lugar do terminador 0x0D do cabeçalho
+    df = read_dbf(FIXTURES / "dbf/sem_terminador.dbf")
+    assert df["NOME"].iloc[0] == "São Félix" and df["COD"].iloc[0] == "2930709"
