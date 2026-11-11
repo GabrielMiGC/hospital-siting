@@ -87,3 +87,15 @@ def test_checks_fail_on_incomplete_matrix(cfg_fixture):
     t["matriz_tempo_viagem"] = t["matriz_tempo_viagem"].iloc[1:]
     with pytest.raises(GoldCheckError):
         checks_gold(cfg_fixture, t)
+
+
+def test_custo_obra_uma_linha_por_padrao_mes_mais_recente(cfg_fixture):
+    import pandas as pd
+
+    from hospital_siting.core.storage import silver_path, write_parquet
+
+    write_parquet(pd.DataFrame({"fonte": ["SINAPI", "SINAPI"], "padrao": ["média UF"] * 2,
+                                "valor_m2": [1000.0, 2000.0], "mes": ["2024-12", "2026-09"]}),
+                  silver_path(cfg_fixture, "custo_obra_m2"))
+    obra = tabelas_gold(cfg_fixture)["custo_obra_m2"]
+    assert len(obra) == 1 and obra.iloc[0].mes_origem == "2026-09" and obra.iloc[0].valor_m2 == pytest.approx(2000.0)

@@ -173,7 +173,7 @@ def tabelas_gold(cfg: Config) -> dict[str, pd.DataFrame]:
     t["valor_medio_internacao"] = _valor_medio(sih)
 
     # Custos
-    o = obra.copy()
+    o = obra.sort_values("mes").groupby(["fonte", "padrao"], as_index=False).last()  # mês mais recente por padrão
     o["valor_m2"] = _corr(o, "valor_m2", o["mes"], idx, "INCC", base)
     t["custo_obra_m2"] = o.rename(columns={"mes": "mes_origem"}).assign(data_base=base)[
         ["fonte", "padrao", "valor_m2", "mes_origem", "data_base"]
