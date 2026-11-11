@@ -50,3 +50,20 @@ CSV em UTF-8, separador vírgula, ponto decimal. Toda linha tem `fonte`, `docume
 - CFM 2.174/2017 e 2.077/2014: https://sistemas.cfm.org.br/normas/arquivos/resolucoes/BR/2017/2174_2017.pdf ; https://sistemas.cfm.org.br/normas/arquivos/resolucoes/BR/2014/2077_2014.pdf
 - SES/DF, Manual de Gestão de Custos Hospitalares (2023); SESAB, Consórcios de Saúde da Bahia: http://www.ba.gov.br/saude/atencao-a-saude/consorcios ; Almeida et al., Cad. Saúde Pública 38(9), 2022.
 - IBGE: Censo 2022 (SIDRA 9514) e Registro Civil (SIDRA 2612).
+
+## equipamentos_ambiente.csv
+
+Equipamentos por ambiente (UTI adulto, UTI neonatal, Centro cirúrgico, Imagem, Pronto-socorro, Internação), com `unidade` (`por_leito`, `por_sala`, `por_hospital`), `quantidade_ref` por unidade e `cod_item_renem` (Cod. Item da lista RENEM do Ministério da Saúde/FNS; vazio quando não há item correspondente). 55 linhas, 54 com código RENEM. Curado à mão; cada linha cita documento e artigo/anexo.
+
+- **Frações e reservas**: "1 para cada N leitos" vira `1/N` por leito. Nas UTI (RDC 7/2010) a `quantidade_ref` **inclui a reserva operacional** exigida pela norma (ex.: bomba de infusão adulto 4 + 1/3; ventilador 0,5 + 0,2). A RDC 26/2012 só altera os arts. 14 e 72 (recursos humanos e prazo), não os recursos materiais.
+- **Itens "por unidade"** (desfibrilador da UTI neonatal e do centro cirúrgico, ECG da UTI neonatal) estão como `por_hospital` = 1, assumindo uma unidade desse tipo por hospital.
+- **Opções RENEM**: onde a lista tem configurações (ex.: cama básica 765 / Fowler 1981 / elétrica 1002; mesa cirúrgica elétrica 2174 / mecânica 363; tomógrafo até 16 canais 11804 / 16-80 canais 11805), a escolha e as alternativas estão em `observacao`. O mesmo código pode aparecer em mais de um ambiente (ex.: 11425 em ventilador de UTI, de transporte e do PS).
+
+Pendências:
+- **Pronto-socorro**: a Portaria 2.048/2002 lista o arsenal mínimo sem quantidades; `quantidade_ref`=1 por hospital é existência mínima (premissa), exceto a maca da sala de emergência (2, mínimo de "dois ou mais casos simultâneos"). Falta norma de quantidade por leito de observação/sala.
+- **Imagem**: nenhuma norma citada define quantidade; raio-X, ultrassom, tomógrafo e ressonância (1 por hospital, a partir de H1/H2/H3) são decisão de arquétipo (spec §9). A RDC 611/2022 trata de proteção radiológica, não de quantidade. Raio-X móvel, fluoroscopia, mamografia e hemodinâmica (H3/H4) não incluídos.
+- **Centro cirúrgico**: mesa e foco cirúrgico têm quantidade só implícita (1 por sala); a RDC 50/2002 define pontos de gases/vácuo, não lista equipamentos. Aparelho de anestesia e monitor vêm da Resolução CFM 2.174/2017 (norma profissional, não sanitária). Sem norma de quantidade para bisturi elétrico, autoclave (pertence à CME, ambiente não coberto), mesa auxiliar, instrumental. SRPA (recuperação pós-anestésica) não incluída.
+- **Internação**: só a cama (por definição de leito na RDC 50). Nenhuma norma citável de equipamento por leito de enfermaria (carro de emergência, ECG, oxímetro) foi encontrada.
+- **UTI**: itens sem item RENEM equivalente ou com aproximação: pressão arterial invasiva (sem código), ventilador de transporte e neonatal (usam 11425), monitor neonatal (10985). UTI pediátrica (RDC 7, arts. 61-66) não coberta. Itens por unidade sem custo relevante (negatoscópio, otoscópio, materiais de punção etc.) não incluídos.
+- **Verificação**: o texto da RDC 50 foi lido da cópia consolidada da BVS; conferir se a numeração de itens/tabelas bate com a versão atualizada (RDC 307/2002 e 189/2003 alteraram partes).
+- Fontes: RDC 7/2010 https://bvsms.saude.gov.br/bvs/saudelegis/anvisa/2010/res0007_24_02_2010.html ; RDC 50/2002 https://bvsms.saude.gov.br/bvs/saudelegis/anvisa/2002/rdc0050_21_02_2002.html ; Portaria 2.048/2002 https://bvsms.saude.gov.br/bvs/saudelegis/gm/2002/prt2048_05_11_2002.html ; CFM 2.174/2017 https://sistemas.cfm.org.br/normas/arquivos/resolucoes/BR/2017/2174_2017.pdf ; lista RENEM (FNS/MS), arquivo local usado na curadoria.
