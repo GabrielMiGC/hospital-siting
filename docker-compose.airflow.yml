@@ -1,0 +1,76 @@
+# Override: docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
+# Requer AIRFLOW_ADMIN_PASSWORD no ambiente (sem senha fixa no repositório).
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: docker/airflow/Dockerfile
+  image: hospital-siting-airflow:2.10
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgis:5432/airflow
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-hospital-siting-dev-secret}
+    HS_PG_DSN: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgis:5432/hospital_siting
+    HS_DATA_DIR: /opt/hospital_siting/data
+  volumes:
+    - ./:/opt/hospital_siting
+    - ./airflow/dags:/opt/airflow/dags
+    - airflow-logs:/opt/airflow/logs
+    # Docker do host para a DAG rotas (OSRM). Atenção: bind mounts dos `docker run` internos
+    # são resolvidos no host, então o caminho do repositório deve coincidir com o do host.
+    - /var/run/docker.sock:/var/run/docker.sock
+  group_add:
+    - "${DOCKER_GID:-0}"
+  depends_on:
+    postgis:
+      condition: service_healthy
+
+services:
+  airflow-init:
+    <<: *airflow-common
+    container_name: hs-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        : "$${AIRFLOW_ADMIN_PASSWORD:?defina AIRFLOW_ADMIN_PASSWORD}"
+        export PGPASSWORD="$${PG_PASSWORD}"
+        if ! psql -h postgis -U "$${PG_USER}" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='airflow'" | grep -q 1; then
+          psql -h postgis -U "$${PG_USER}" -d postgres -c "CREATE DATABASE airflow"
+        fi
+        airflow db migrate
+        airflow users create --username admin --firstname Admin --lastname Admin \
+          --role Admin --email admin@example.com --password "$${AIRFLOW_ADMIN_PASSWORD}" || true
+    environment:
+      <<: *airflow-env
+      PG_USER: ${POSTGRES_USER:-postgres}
+      PG_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-}
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: hs-airflow-webserver
+    command: webserver
+    ports:
+      - "${AIRFLOW_PORT:-8080}:8080"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: hs-airflow-scheduler
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  airflow-logs:
