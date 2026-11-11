@@ -21,3 +21,5 @@ params:
   ocupacao: 0.80
   fator_osrm: 1.0          # aplicado só na Fase 2
   osm_buffer_km: 50
+  cenario_necessidade: 2   # Portaria 1.631/2015: 1=P25, 2=mediana, 3=P75
+  encargos_pct: 0.70       # encargos trabalhistas sobre salário (hipótese documentada; ajustável na Fase 2)
