@@ -8,3 +8,4 @@ data/
 dist/
 .superpowers/
 *.egg-info/
+.claude/settings.local.json
