@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 
@@ -19,7 +20,7 @@ from hospital_siting.schemas.silver import MATRIZ_TEMPO
 
 COMPOSE = REPO_ROOT / "docker-compose.osrm.yml"
 PREPARE = REPO_ROOT / "docker" / "osrm" / "prepare.sh"
-OSRM_URL = "http://localhost:5000"
+OSRM_URL = os.environ.get("HS_OSRM_URL", "http://localhost:5000")
 OSRM_ARQ = "mapa.osrm"
 
 
