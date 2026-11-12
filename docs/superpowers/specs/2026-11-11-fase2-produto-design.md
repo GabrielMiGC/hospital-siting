@@ -128,3 +128,14 @@ código RENEM. 5. Aporte estadual = 40% do custo anual (consorcio_param), mais u
 6. Participação municipal ponderada pelo peso de cobertura. 7. Candidatos com ≥ 20 mil habitantes.
 8. Penalidade em leitos-equivalentes por hospital existente a até 60 min. 9. Leaflet sem build, servido pela API.
 10. IST de 15% e turnos de 8 h na conversão de postos em FTE.
+
+## 10. O que mudou na implementação
+
+- **Formulação revisada (§5):** o atendimento passou a ser `u_ijt` (déficit de i atendido por j), limitado pelo déficit
+  e pela capacidade, sem a ligação par a par `z ≤ w·D·x`. A adesão binária ao consórcio só existe onde a receita decide
+  a viabilidade. Um município pode ser atendido por dois hospitais, mas é sócio de um só. Motivo: 10–20 s → 4–9 s com
+  cobertura igual ou maior (bugs 15–17).
+- **Solver:** gap padrão de 1% e limite de 10 s (em vez de 0,5% e 20 s). A interface mostra status, gap e tempo.
+- **Dependências:** o pipeline da Fase 1 virou o extra `[pipeline]`; a imagem da API instala só o núcleo.
+- **Snapshot:** o deploy usa `dist/gold_snapshot_fase2.sql.gz` (com os equipamentos novos); o snapshot da Fase 1 foi mantido.
+- **Mapa sem tiles:** os tiles da CARTO passaram a exigir chave; a malha do IBGE basta.

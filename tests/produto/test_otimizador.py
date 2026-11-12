@@ -154,3 +154,18 @@ def test_receita_de_um_municipio_nao_sustenta_dois_consorcios():
     socio_b = [h.cod_ibge for h in res.hospitais for m in h.municipios if m.cod_ibge == "B" and m.consorciado]
     assert len(socio_b) == 1
     assert res.hospitais[0].viabilidade.cobertura_pct >= 100
+
+
+def test_municipio_atendido_por_dois_hospitais_conta_inteiro_no_relatorio():
+    # B (não candidato) tem 20 leitos de déficit e fica a 20 min de A e de C; cada H1 tem 10 leitos clínicos.
+    g = fazer_gold(
+        municipios=[("A", "A", 30_000, RICO, 0, 0), ("B", "B", 5_000, RICO, 0, 1), ("C", "C", 30_000, RICO, 0, 2)],
+        deficit=[("B", "clinico", 20)],
+        tempos={("A", "B"): 20, ("B", "C"): 20, ("A", "C"): 300},
+    )
+    res = otimizar(g, Parametros(orcamento=5e6, portes=["H1"]))
+    assert _abertos(res) == [("A", "H1"), ("C", "H1")]
+    assert res.deficit_coberto == pytest.approx(20)
+    assert [h.deficit_coberto for h in res.hospitais] == pytest.approx([10, 10])
+    socios_b = [h.cod_ibge for h in res.hospitais for m in h.municipios if m.cod_ibge == "B" and m.consorciado]
+    assert len(socios_b) == 1  # atendido pelos dois, sócio de um só

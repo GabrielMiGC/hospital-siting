@@ -1,6 +1,6 @@
-# Bugs encontrados na Fase 1
+# Bugs encontrados
 
-Registro dos defeitos achados durante a construção da base de dados: o que aparecia, por que acontecia, como foi corrigido e qual teste impede a volta. Os mais instrutivos vieram de fontes públicas que não se comportam como a documentação diz.
+Registro dos defeitos achados durante a construção da base de dados (Fase 1) e do produto (Fase 2): o que aparecia, por que acontecia, como foi corrigido e qual teste impede a volta. Os mais instrutivos vieram de fontes públicas que não se comportam como a documentação diz.
 
 Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 
@@ -22,6 +22,14 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 | 12 | custos | Lista RENEM sem mês de referência | [25bd8ba] |
 | 13 | custos | Descrição do CBO repetia o código | [de8d661] |
 | 14 | meta | `meta.execucoes` no banco ficava uma execução atrasada | [fix/meta-execucoes] |
+| 15 | otimizador | Modelo mal escalado: HiGHS gastava segundos só lidando com coeficientes de 1e-5 a 1e9 | feat/fase2 |
+| 16 | otimizador | Formulação par a par levava 10–20 s na Bahia | feat/fase2 |
+| 17 | explicação | Relatório perdia a cobertura de municípios atendidos por dois hospitais | feat/fase2 |
+| 18 | otimizador | PuLP 4 mudou a API (variáveis e retorno do `solve`) | feat/fase2 |
+| 19 | interface | Tiles da CARTO passaram a exigir chave de API | feat/fase2 |
+| 20 | interface | Mapa abria em zoom 12, fora da Bahia | feat/fase2 |
+| 21 | deploy | Compose de deploy recriaria o PostGIS de desenvolvimento | feat/fase2 |
+| 22 | deploy | Imagem da API com 2 GB por carregar o pipeline inteiro | feat/fase2 |
 
 ## Detalhes
 
@@ -101,7 +109,65 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 - **Correção:** a gold monta o registro antes da carga e o insere em `meta.execucoes` na mesma transação dos dados. O jsonl só recebe o "ok" depois do commit, e uma falha passa a ser registrada como "fail". A verificação do contrato foi para antes da carga, para que um contrato divergente nem chegue a tocar nos dados.
 - **Teste:** `test_run_gold_registra_a_propria_execucao_no_banco`.
 
-## Limitações conhecidas (não corrigidas)
+## Fase 2 (produto)
+
+### 15. Modelo mal escalado
+- **Sintoma:** o HiGHS avisava "Problem is badly scaled" e passava 4 s só no presolve.
+- **Causa:** custos e receitas entravam em reais (até 2·10⁹) na mesma matriz que pesos de cobertura (até 10⁻⁵).
+- **Correção:** todo valor monetário entra no modelo em R$ milhões; a resposta volta em reais.
+
+### 16. Formulação par a par lenta
+- **Sintoma:** 10 a 21 s por otimização com a gold da Bahia (165 candidatos × 4 portes), longe de um slider ao vivo.
+- **Causa:** cada par município–hospital tinha uma binária de adesão e uma restrição `z ≤ w·D·x` por tipo de leito (9 mil binárias, 36 mil linhas).
+  O log do HiGHS mostrou que a solução a 3% do limite aparecia em 2 s e o resto era gasto fechando o gap.
+- **Correção:** o atendimento virou `u_ijt` limitado pelo déficit de cada município e pela capacidade de cada hospital, sem ligação par a par.
+  A adesão binária ao consórcio ficou só onde a receita decide a viabilidade (quando a sede sozinha não paga o porte). Gap padrão de 1% e limite de 10 s.
+  Resultado: 4–9 s localmente, com cobertura igual ou maior (R$ 3 bi: 3.033 leitos contra 2.948). O teste `test_receita_de_um_municipio_nao_sustenta_dois_consorcios` garante que a receita de um município não conta duas vezes.
+- **Ainda longe do "~1 s" da spec.** A API compensa com cache e pré-cálculo dos orçamentos do slider, e a interface mostra o tempo e o gap de cada resposta.
+
+### 17. Cobertura sumindo do relatório
+- **Sintoma:** depois da reformulação, o déficit coberto caiu de 1.078 para 908 leitos (R$ 1 bi), o que é impossível para um modelo mais relaxado.
+- **Causa:** a explicação só somava a cobertura vinda de municípios do consórcio; com a nova formulação um município pode ser atendido por dois hospitais e é sócio de um só.
+- **Correção:** cada hospital soma tudo o que atende; os não sócios aparecem como "atendidos" (linha tracejada no mapa) e não contribuem para o consórcio.
+- **Teste:** `test_municipio_atendido_por_dois_hospitais_conta_inteiro_no_relatorio`.
+
+### 18. PuLP 4
+- **Sintoma:** `LpVariable(..., cat=...)` dava `TypeError`.
+- **Causa:** o PuLP 4.0 (núcleo em Rust) cria variáveis por `prob.add_variable` e devolve estatísticas do `solve` em vez de um código de status.
+- **Correção:** o otimizador usa a API nova e lê status e gap de `LpSolveStats`.
+
+### 19. Tiles com chave de API
+- **Sintoma:** o mapa mostrava "API KEY REQUIRED".
+- **Causa:** os tiles públicos da CARTO passaram a exigir chave.
+- **Correção:** o mapa não usa fundo; a malha do IBGE já desenha o estado e o deploy não depende de terceiros.
+
+### 20. Mapa fora de enquadramento
+- **Sintoma:** a interface abria em zoom 12 num ponto qualquer.
+- **Causa:** o Leaflet mediu o contêiner antes do layout em grid terminar e calculou o enquadramento com tamanho zero.
+- **Correção:** `invalidateSize()` antes do `fitBounds`, com folga para os painéis flutuantes.
+
+### 21. Compose de deploy contra o PostGIS local
+- **Sintoma (evitado antes de rodar):** subir `docker-compose.deploy.yml` na máquina de desenvolvimento recriaria o contêiner `hs-postgis`.
+- **Causa:** os dois arquivos ficam na mesma pasta, então teriam o mesmo nome de projeto e o mesmo serviço `postgis`.
+- **Correção:** projeto `hospital-siting-deploy` com volume próprio. O healthcheck consulta `gold.dim_municipio` pela rede, porque durante a restauração o Postgres só escuta no socket e `pg_isready` daria "pronto" cedo demais.
+
+### 22. Imagem de 2 GB
+- **Sintoma:** a imagem da API tinha 2,04 GB.
+- **Causa:** todas as dependências do pipeline (geopandas, duckdb, pyarrow, datasus…) estavam no núcleo do pacote.
+- **Correção:** o pipeline virou o extra `[pipeline]`, instalado pelo Airflow e pelo CI. A imagem da API caiu para 857 MB.
+
+## Achados de modelagem da Fase 2 (não são bugs)
+- **O consórcio com 20% da receita nunca é o gargalo na Bahia.** A contribuição da própria sede de um município de 30 mil habitantes já paga a operação de um H1. No orçamento de R$ 1 bi o consórcio mais apertado cobre 167% do custo. A restrição só passa a decidir abaixo de ~5%, e com 1% já descarta candidatos. O slider de receita municipal deixa isso visível.
+- **O objetivo favorece hospitais pequenos.** Por leito, um H1 sai mais barato de construir e operar, e o objetivo conta todo leito de déficit igual. Até R$ 1 bi o modelo espalha H1. A UTI só entra quando o orçamento cresce ou quando o usuário restringe os portes. Uma prioridade por tipo de leito seria uma decisão de política pública; não foi inventada.
+- **Custo de pessoal subestimado sem ajuste.** As normas cobrem só enfermagem, UTI, centro cirúrgico e PS. O fator "equipe fora das normas" (padrão +100%) cobre médicos de enfermaria, apoio e administração. Mesmo assim a operação fica em ~R$ 0,4–0,6 mi por leito/ano.
+- **SINAPI residencial × hospitalar.** O fator hospitalar (padrão 2,5×) é premissa sem fonte primária, ajustável na interface.
+
+## Limitações conhecidas da Fase 2
+- A participação de cada município no consórcio é ponderada pelo peso de cobertura (proxy da população atendida).
+- Os descartes ("por que não…") vêm de uma avaliação isolada de cada candidato, não de uma reotimização sem ele.
+- O snapshot `dist/gold_snapshot.sql.gz` da Fase 1 foi mantido; o deploy usa `dist/gold_snapshot_fase2.sql.gz`, que inclui os equipamentos de ortopedia, hemodinâmica e neurocirurgia.
+
+## Limitações conhecidas da Fase 1 (não corrigidas)
 - O CNES não registra quantos estabelecimentos foram descartados na transformação.
 - A permanência de enfermaria inclui os dias de UTI da mesma AIH.
 - `parse_brl` é ambíguo para números com ponto decimal e sem separador de milhar.
