@@ -16,6 +16,8 @@ const FORMATO = {
   peso_concentracao: (v) => (+v === 0 ? "nenhuma" : `${(+v).toFixed(1).replace(".", ",")} leito`),
   pop_min_candidato: (v) => `${Math.round(v / 1000)} mil`,
 };
+const vezes = (v) => `${String(+v).replace(".", ",")}×`;
+for (const t of Object.keys(ROTULO)) FORMATO[`peso_${t}`] = vezes;
 const CAMPOS = Object.keys(FORMATO);
 
 const estado = { orcamentos: [], padroes: {}, geo: null, portes: {}, resultado: null, ativo: null, pedido: 0 };

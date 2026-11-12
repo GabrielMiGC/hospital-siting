@@ -54,6 +54,8 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .porte input:focus-visible + span { outline: 2px solid var(--acento); outline-offset: 2px; }
 
 .premissas summary { cursor: pointer; font-weight: 500; margin-bottom: 10px; }
+.premissas + .premissas { margin-top: 10px; }
+.nota { font-size: 12px; color: var(--tinta-2); margin: 0 0 10px; }
 .discreto { background: none; border: 1px solid var(--linha); border-radius: 6px; padding: 4px 10px; color: var(--tinta-2); cursor: pointer; font: inherit; }
 .camadas label, .chave { display: block; margin: 3px 0; cursor: pointer; }
 .chave { margin-top: 8px; }

@@ -36,6 +36,24 @@
         <div class="linha"><input id="peso_concentracao" type="range" min="0" max="10" step="0.5" value="1"><output data-for="peso_concentracao"></output></div>
       </label>
 
+      <details class="premissas" id="prioridade">
+        <summary>Prioridade por tipo de leito</summary>
+        <p class="nota">Quanto vale, no objetivo, cada leito de déficit coberto. Todos em 1× = todo leito vale igual.
+          Dar mais peso à UTI é uma escolha de política pública, não um dado: não há valor recomendado.</p>
+        <label class="campo"><span class="rotulo">Clínico</span>
+          <div class="linha"><input id="peso_clinico" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_clinico"></output></div></label>
+        <label class="campo"><span class="rotulo">Cirúrgico</span>
+          <div class="linha"><input id="peso_cirurgico" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_cirurgico"></output></div></label>
+        <label class="campo"><span class="rotulo">Obstétrico</span>
+          <div class="linha"><input id="peso_obstetrico" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_obstetrico"></output></div></label>
+        <label class="campo"><span class="rotulo">Pediátrico</span>
+          <div class="linha"><input id="peso_pediatrico" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_pediatrico"></output></div></label>
+        <label class="campo"><span class="rotulo">UTI adulto</span>
+          <div class="linha"><input id="peso_uti_adulto" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_uti_adulto"></output></div></label>
+        <label class="campo"><span class="rotulo">UTI neonatal/pediátrica</span>
+          <div class="linha"><input id="peso_uti_neo_ped" type="range" min="0" max="5" step="0.5" value="1"><output data-for="peso_uti_neo_ped"></output></div></label>
+      </details>
+
       <details class="premissas">
         <summary>Premissas ajustáveis</summary>
         <label class="campo"><span class="rotulo">Receita municipal destinada ao consórcio</span>
