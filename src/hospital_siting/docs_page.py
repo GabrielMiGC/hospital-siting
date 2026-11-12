@@ -12,6 +12,7 @@ from hospital_siting.core.config import REPO_ROOT, Config
 
 TEMPLATE = REPO_ROOT / "docs" / "como-funciona" / "template.html"
 SEM_DADOS = "Ainda não executado"
+FASE2_PADRAO = "Rode <code>python -m hospital_siting.cli docs</code> com a gold carregada para gerar esta seção."
 
 
 def _jsonl(path: Path) -> list[dict]:
@@ -39,7 +40,7 @@ def _fontes(cfg: Config) -> list[dict]:
     return linhas
 
 
-def render(cfg: Config, out: Path) -> Path:
+def render(cfg: Config, out: Path, fase2_html: str | None = None) -> Path:
     fontes = _fontes(cfg)
     validacoes = _jsonl(cfg.data_dir / "meta" / "validacoes.jsonl")
     execucoes = _jsonl(cfg.data_dir / "meta" / "execucoes.jsonl")
@@ -84,7 +85,7 @@ def render(cfg: Config, out: Path) -> Path:
         .replace("{{KPIS}}", kpis)
         .replace("{{FONTES}}", linhas_f)
         .replace("{{VALIDACOES}}", linhas_v)
-        .replace("{{FASE2}}", "O otimizador (Fase 2) consome a camada gold; esta seção será preenchida por ele.")
+        .replace("{{FASE2}}", fase2_html or f"<p>{FASE2_PADRAO}</p>")
         .replace("{{GERADO_EM}}", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"))
         .replace("{{UF}}", escape(cfg.uf))
         .replace("{{DATA_BASE}}", escape(str(data_base)))
