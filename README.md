@@ -89,19 +89,18 @@ O servidor recebe só a gold pronta (snapshot) + API/interface. Airflow e OSRM n
 docker exec hs-postgis pg_dump -U postgres -d hospital_siting -n gold -n meta --no-owner | gzip -9 > dist/gold_snapshot_fase2.sql.gz
 ```
 
-```bash
-scp dist/gold_snapshot_fase2.sql.gz servidor:/srv/hospital-siting/
-```
+Publique o dump como asset de uma release do GitHub (a `v0.2.0` traz o atual). O compose de deploy baixa o asset no
+primeiro boot, confere o sha256 e só então o PostGIS o restaura; o servidor não precisa de SSH nem de cópia manual.
 
-No Dokploy: aplicação do tipo Compose apontando para este repositório e `docker-compose.deploy.yml`. Variáveis:
-`POSTGRES_PASSWORD` e `HS_SNAPSHOT=/srv/hospital-siting/gold_snapshot_fase2.sql.gz`. Em Domains, gere o domínio
-gratuito do Dokploy para o serviço `api`, porta 8000. O PostGIS restaura o snapshot no primeiro boot. Para atualizar a
-gold depois, apague o volume `gold` e reimplante.
+No Dokploy: aplicação do tipo Compose apontando para este repositório e `docker-compose.deploy.yml`. Variável
+obrigatória: `POSTGRES_PASSWORD`. Em Domains, gere o domínio gratuito do Dokploy para o serviço `api`, porta 8000. Para
+trocar a gold, publique uma release nova, defina `HS_SNAPSHOT_URL` e `HS_SNAPSHOT_SHA256`, apague o volume `gold` e
+reimplante.
 
 Teste local do mesmo compose (http://localhost:8080):
 
 ```bash
-POSTGRES_PASSWORD=troque docker compose -f docker-compose.deploy.yml up -d --build
+POSTGRES_PASSWORD=troque docker compose -f docker-compose.deploy.yml -f docker-compose.local.yml up -d --build
 ```
 
 Orquestração com Airflow:
