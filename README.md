@@ -16,6 +16,9 @@ no PostgreSQL/PostGIS tudo o que o otimizador da Fase 2 consome:
 A página [docs/como-funciona](docs/como-funciona/) resume em menos de 3 minutos os passos seguidos, as decisões
 tomadas e os porquês. Ela é gerada a partir dos metadados do próprio pipeline.
 
+Os defeitos encontrados durante a construção, com causa, correção e teste de regressão, estão em
+[docs/bugs-encontrados.md](docs/bugs-encontrados.md).
+
 ## Arquitetura
 
 ```
