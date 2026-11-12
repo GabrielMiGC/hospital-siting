@@ -401,33 +401,37 @@ wheels = [
 
 [[package]]
 name = "hospital-siting"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
+    { name = "highspy" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pulp" },
+    { name = "pyyaml" },
+    { name = "sqlalchemy" },
+    { name = "typer" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+pipeline = [
     { name = "beautifulsoup4" },
     { name = "datasus-dbc" },
     { name = "dbfread" },
     { name = "duckdb" },
-    { name = "fastapi" },
     { name = "geoalchemy2" },
     { name = "geobr" },
     { name = "geopandas" },
-    { name = "highspy" },
     { name = "httpx" },
     { name = "lxml" },
-    { name = "numpy" },
     { name = "openpyxl" },
-    { name = "pandas" },
     { name = "pandera" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pulp" },
     { name = "py7zr" },
     { name = "pyarrow" },
-    { name = "pyyaml" },
     { name = "shapely" },
-    { name = "sqlalchemy" },
-    { name = "typer" },
-    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.dev-dependencies]
@@ -441,31 +445,32 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.12" },
-    { name = "datasus-dbc", specifier = ">=0.1" },
-    { name = "dbfread", specifier = ">=2.0" },
-    { name = "duckdb", specifier = ">=1.1" },
+    { name = "beautifulsoup4", marker = "extra == 'pipeline'", specifier = ">=4.12" },
+    { name = "datasus-dbc", marker = "extra == 'pipeline'", specifier = ">=0.1" },
+    { name = "dbfread", marker = "extra == 'pipeline'", specifier = ">=2.0" },
+    { name = "duckdb", marker = "extra == 'pipeline'", specifier = ">=1.1" },
     { name = "fastapi", specifier = ">=0.162.5" },
-    { name = "geoalchemy2", specifier = ">=0.15" },
-    { name = "geobr", specifier = ">=0.2.2" },
-    { name = "geopandas", specifier = ">=1.0" },
+    { name = "geoalchemy2", marker = "extra == 'pipeline'", specifier = ">=0.15" },
+    { name = "geobr", marker = "extra == 'pipeline'", specifier = ">=0.2.2" },
+    { name = "geopandas", marker = "extra == 'pipeline'", specifier = ">=1.0" },
     { name = "highspy", specifier = ">=1.16.0" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "lxml", specifier = ">=5.0" },
+    { name = "httpx", marker = "extra == 'pipeline'", specifier = ">=0.27" },
+    { name = "lxml", marker = "extra == 'pipeline'", specifier = ">=5.0" },
     { name = "numpy", specifier = ">=1.26" },
-    { name = "openpyxl", specifier = ">=3.1" },
+    { name = "openpyxl", marker = "extra == 'pipeline'", specifier = ">=3.1" },
     { name = "pandas", specifier = ">=2.2" },
-    { name = "pandera", specifier = ">=0.20" },
+    { name = "pandera", marker = "extra == 'pipeline'", specifier = ">=0.20" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pulp", specifier = ">=4.2.0" },
-    { name = "py7zr", specifier = ">=0.22" },
-    { name = "pyarrow", specifier = ">=17" },
+    { name = "py7zr", marker = "extra == 'pipeline'", specifier = ">=0.22" },
+    { name = "pyarrow", marker = "extra == 'pipeline'", specifier = ">=17" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "shapely", specifier = ">=2.0" },
+    { name = "shapely", marker = "extra == 'pipeline'", specifier = ">=2.0" },
     { name = "sqlalchemy", specifier = ">=2.0" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
 ]
+provides-extras = ["pipeline"]
 
 [package.metadata.requires-dev]
 dev = [

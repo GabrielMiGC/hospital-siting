@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.pytest_cache
+.ruff_cache
+.superpowers
+.claude
+**/__pycache__
+data
+dist
+airflow
+tests
+seeds
+docker
+*.md
+!README.md

@@ -43,7 +43,7 @@ class Parametros:
     aporte_por_leito: float = 0.0  # R$/leito/ano, além da fração estadual do consórcio
     pop_min_candidato: int = 20_000
     premissas: Premissas = field(default_factory=Premissas)
-    time_limit: float = 15.0
+    time_limit: float = 10.0
     gap: float = 0.01  # 1%: o HiGHS acha soluções a ~3% do limite em ~2 s; fechar 0,5% custa mais 10 s
 
 
