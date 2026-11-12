@@ -21,7 +21,7 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 | 11 | custos | Salário de contrato de 20 h comparado com o de 40 h | [25bd8ba] |
 | 12 | custos | Lista RENEM sem mês de referência | [25bd8ba] |
 | 13 | custos | Descrição do CBO repetia o código | [de8d661] |
-| 14 | meta | `meta.execucoes` no banco ficava uma execução atrasada | em correção |
+| 14 | meta | `meta.execucoes` no banco ficava uma execução atrasada | [fix/meta-execucoes] |
 
 ## Detalhes
 
@@ -98,7 +98,8 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 ### 14. `meta.execucoes` atrasada
 - **Sintoma:** depois de rodar a gold, a tabela `meta.execucoes` no PostGIS não mostrava essa execução, só a anterior.
 - **Causa:** a gold carrega o schema `meta` a partir de `data/meta/execucoes.jsonl` e só depois registra a própria execução no arquivo.
-- **Correção:** em andamento.
+- **Correção:** a gold monta o registro antes da carga e o insere em `meta.execucoes` na mesma transação dos dados. O jsonl só recebe o "ok" depois do commit, e uma falha passa a ser registrada como "fail". A verificação do contrato foi para antes da carga, para que um contrato divergente nem chegue a tocar nos dados.
+- **Teste:** `test_run_gold_registra_a_propria_execucao_no_banco`.
 
 ## Limitações conhecidas (não corrigidas)
 - O CNES não registra quantos estabelecimentos foram descartados na transformação.
@@ -117,3 +118,4 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 [8abae29]: https://github.com/GabrielMiGC/hospital-siting/commit/8abae29
 [25bd8ba]: https://github.com/GabrielMiGC/hospital-siting/commit/25bd8ba
 [de8d661]: https://github.com/GabrielMiGC/hospital-siting/commit/de8d661
+[fix/meta-execucoes]: https://github.com/GabrielMiGC/hospital-siting/tree/fix/meta-execucoes
