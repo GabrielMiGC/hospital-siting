@@ -114,9 +114,15 @@ def _equipamentos(gold: Gold, porte: str, leitos: dict[str, int], salas_cc: int,
     for r in gold.equipamentos.itertuples(index=False):
         if r.ambiente not in ambientes:
             continue
-        minimo = next((m for (a, pref), m in EQUIPAMENTO_PORTE_MINIMO.items()
-                       if a == r.ambiente and r.equipamento.startswith(pref)), None)
-        if minimo and porte not in ORDEM_PORTES[ORDEM_PORTES.index(minimo):]:
+        minimo = next(
+            (
+                m
+                for (a, pref), m in EQUIPAMENTO_PORTE_MINIMO.items()
+                if a == r.ambiente and r.equipamento.startswith(pref)
+            ),
+            None,
+        )
+        if minimo and porte not in ORDEM_PORTES[ORDEM_PORTES.index(minimo) :]:
             continue
         if r.unidade == "por_leito":
             mult = sum(leitos.get(t, 0) for t in _LEITOS_DO_AMBIENTE.get(r.ambiente, ()))
