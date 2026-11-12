@@ -1,25 +1,51 @@
 # Deploy da Fase 2 (KVM2 via Dokploy, ou local): PostGIS com a gold restaurada do snapshot + API/interface.
 # Airflow e OSRM nunca rodam no servidor: ele recebe só a gold pronta (spec §11).
 #
-# Local:   docker compose -f docker-compose.deploy.yml up -d --build   ->  http://localhost:8080
-# Servidor: copie o snapshot uma vez (scp dist/gold_snapshot_fase2.sql.gz servidor:/srv/hospital-siting/) e defina
-#           HS_SNAPSHOT=/srv/hospital-siting/gold_snapshot_fase2.sql.gz e POSTGRES_PASSWORD nas variáveis do Dokploy.
-#           O endereço público vem do domínio gerado pelo Dokploy, apontado para o serviço "api", porta 8000.
+# O snapshot vem de um asset de release do GitHub, conferido por sha256 antes de chegar ao PostGIS. Para publicar outra
+# gold: gere o dump, publique numa release nova, troque HS_SNAPSHOT_URL/HS_SNAPSHOT_SHA256, apague o volume "gold" e
+# reimplante.
+#
+# Servidor (Dokploy): defina POSTGRES_PASSWORD nas variáveis e gere o domínio para o serviço "api", porta 8000.
+# Local:   docker compose -f docker-compose.deploy.yml -f docker-compose.local.yml up -d --build  ->  http://localhost:8080
 
 name: hospital-siting-deploy  # distinto do compose de desenvolvimento (que tem o serviço "postgis" com a gold local)
 
 services:
+  gold-init:
+    # Prepara os scripts de inicialização do PostGIS. Roda a cada subida, mas só baixa se o arquivo faltar ou não bater.
+    image: curlimages/curl:8.10.1
+    user: "0:0"
+    restart: "no"
+    environment:
+      URL: ${HS_SNAPSHOT_URL:-https://github.com/GabrielMiGC/hospital-siting/releases/download/v0.2.0/gold_snapshot_fase2.sql.gz}
+      SHA256: ${HS_SNAPSHOT_SHA256:-927c373a943e026068ac61cd4112c950061282ec9d30628dc3511934b8105766}
+    volumes:
+      - initdb:/initdb
+    entrypoint: ["/bin/sh", "-euc"]
+    command:
+      - |
+        echo 'CREATE EXTENSION IF NOT EXISTS postgis;' > /initdb/10-postgis.sql
+        if echo "$$SHA256  /initdb/20-gold.sql.gz" | sha256sum -c -s 2>/dev/null; then
+          echo "snapshot já presente"; exit 0
+        fi
+        curl -fsSL --retry 5 -o /initdb/20-gold.tmp "$$URL"
+        echo "$$SHA256  /initdb/20-gold.tmp" | sha256sum -c
+        mv /initdb/20-gold.tmp /initdb/20-gold.sql.gz
+
   postgis:
     image: postgis/postgis:16-3.4
     restart: unless-stopped
+    depends_on:
+      gold-init:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
       POSTGRES_DB: hospital_siting
     volumes:
       - gold:/var/lib/postgresql/data
-      # Restaurado só no primeiro boot (volume vazio), depois do script da imagem que cria a extensão PostGIS.
-      - ${HS_SNAPSHOT:-./dist/gold_snapshot_fase2.sql.gz}:/docker-entrypoint-initdb.d/20-gold.sql.gz:ro
+      # Executado só no primeiro boot (volume "gold" vazio): extensão PostGIS e depois a restauração do snapshot.
+      - initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # Consulta pela rede: durante a restauração o Postgres só escuta no socket, então pg_isready mentiria.
       test: ["CMD-SHELL", "psql -h 127.0.0.1 -U postgres -d hospital_siting -tAc 'SELECT 1 FROM gold.dim_municipio LIMIT 1' | grep -q 1"]
@@ -37,11 +63,10 @@ services:
     environment:
       HS_PG_DSN: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@postgis:5432/hospital_siting
       HS_PRECALCULAR: ${HS_PRECALCULAR:-1}
+    # Sem porta no host: o tráfego público chega pelo Traefik do Dokploy. Localmente, use docker-compose.local.yml.
     expose:
       - "8000"
-    ports:
-      # Só na interface local do host: o tráfego público chega pelo Traefik do Dokploy.
-      - "127.0.0.1:${HS_API_PORT:-8080}:8000"
 
 volumes:
   gold:
+  initdb:
