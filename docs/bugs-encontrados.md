@@ -158,7 +158,16 @@ Cada correção entrou com um teste que falhava antes dela (RED → GREEN).
 
 ## Achados de modelagem da Fase 2 (não são bugs)
 - **O consórcio com 20% da receita nunca é o gargalo na Bahia.** A contribuição da própria sede de um município de 30 mil habitantes já paga a operação de um H1. No orçamento de R$ 1 bi o consórcio mais apertado cobre 167% do custo. A restrição só passa a decidir abaixo de ~5%, e com 1% já descarta candidatos. O slider de receita municipal deixa isso visível.
-- **O objetivo favorece hospitais pequenos.** Por leito, um H1 sai mais barato de construir e operar, e o objetivo conta todo leito de déficit igual. Até R$ 1 bi o modelo espalha H1. A UTI só entra quando o orçamento cresce ou quando o usuário restringe os portes. Uma prioridade por tipo de leito seria uma decisão de política pública; não foi inventada.
+- **O objetivo favorece hospitais pequenos.** Por leito, um H1 sai mais barato de construir e operar, e o objetivo conta todo leito de déficit igual. Até R$ 1 bi o modelo espalha H1. A UTI só entra quando o orçamento cresce ou quando o usuário restringe os portes. **Endereçado com a prioridade por tipo de leito** (design `docs/superpowers/specs/2026-11-12-prioridade-leito-design.md`): o objetivo passou a ser `Σ π_t·w·u − λ·Σ H·y − ε·custo`, com π_t ajustável na interface e na API. O padrão é todos 1, porque o valor relativo de um leito de UTI é decisão de política pública, e com ele o resultado é idêntico ao anterior. Na gold real, com R$ 1 bi:
+
+  | Prioridade de UTI (adulto e neo/ped) | Portes | Leitos cobertos | dos quais UTI | Tempo |
+  |---|---|---|---|---|
+  | 1× (padrão, igual ao anterior) | 21 H1 + 1 H2 | 1.079 | 10 | 5,8 s |
+  | 2× | 5 H1 + 7 H2 | 1.027 | 70 | 3,0 s |
+  | 3× | 1 H1 + 5 H2 + 1 H4 | 978 | 90 | 7,7 s |
+  | 5× | 5 H2 + 1 H4 | 937 | 90 | 11,0 s (limite de tempo, gap 4,6%) |
+
+  A cobertura total cai pouco (−9% com 3×) e a de UTI se multiplica por 9. Com pesos altos (5×) o HiGHS para no limite de 10 s com a melhor solução achada, e não com gap ≤ 1%: a ponderação torna as soluções mais parecidas entre si e o branch-and-bound fecha mais devagar.
 - **Custo de pessoal subestimado sem ajuste.** As normas cobrem só enfermagem, UTI, centro cirúrgico e PS. O fator "equipe fora das normas" (padrão +100%) cobre médicos de enfermaria, apoio e administração. Mesmo assim a operação fica em ~R$ 0,4–0,6 mi por leito/ano.
 - **SINAPI residencial × hospitalar.** O fator hospitalar (padrão 2,5×) é premissa sem fonte primária, ajustável na interface.
 

@@ -43,3 +43,17 @@ def test_otimizador_resolve_a_bahia(gold_real):
     assert res.tempo_s < 30
     membros = [m.cod_ibge for h in res.hospitais for m in h.municipios if m.consorciado]
     assert len(membros) == len(set(membros))  # cada município em no máximo um consórcio
+
+
+def test_prioridade_de_uti_na_bahia_troca_h1_por_portes_com_uti(gold_real):
+    neutro = otimizar(gold_real, Parametros(orcamento=1e9))
+    uti = otimizar(gold_real, Parametros(orcamento=1e9, pesos_leito={"uti_adulto": 3, "uti_neo_ped": 3}))
+    assert neutro.tempo_s < 10
+    assert uti.status in {"ótimo", "limite de tempo"} and uti.tempo_s < 12
+
+    def leitos_uti(r):
+        tipos = ("uti_adulto", "uti_neo_ped")
+        return sum(h.deficit_por_tipo.get(t, 0) for h in r.hospitais for t in tipos)
+
+    assert leitos_uti(uti) > 3 * leitos_uti(neutro)
+    assert sum(h.porte == "H1" for h in uti.hospitais) < sum(h.porte == "H1" for h in neutro.hospitais)
