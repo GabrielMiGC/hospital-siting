@@ -44,3 +44,21 @@ def test_reload_is_idempotent(cfg_fixture, engine):
 def test_contract_matches_ddl(cfg_fixture, engine):
     carregar(cfg_fixture, tabelas_gold(cfg_fixture), engine)
     assert verificar(engine) == []
+
+
+def test_run_gold_registra_a_propria_execucao_no_banco(cfg_fixture, engine):
+    import json
+    from dataclasses import replace
+
+    from hospital_siting import gold
+
+    cfg = replace(cfg_fixture, pg_dsn=TEST_DSN)
+    gold.run(cfg)
+    with engine.connect() as c:
+        no_banco = c.execute(
+            text("select status, extra->>'municipios' from meta.execucoes where dominio = 'gold'")
+        ).all()
+    assert no_banco == [("ok", "3")]  # a execução que acabou de carregar já aparece, sem esperar a próxima
+    linhas = (cfg.data_dir / "meta" / "execucoes.jsonl").read_text(encoding="utf-8").splitlines()
+    em_arquivo = [json.loads(x) for x in linhas if json.loads(x)["dominio"] == "gold"]
+    assert len(em_arquivo) == 1 and em_arquivo[0]["status"] == "ok"

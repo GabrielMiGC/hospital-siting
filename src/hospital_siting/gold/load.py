@@ -40,7 +40,7 @@ def _jsonl(path) -> pd.DataFrame:
     return pd.DataFrame([json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()])
 
 
-def _meta(cfg: Config) -> dict[str, pd.DataFrame]:
+def _meta(cfg: Config, execucao: dict | None = None) -> dict[str, pd.DataFrame]:
     fontes = [_jsonl(m) for m in sorted((cfg.data_dir / "raw").glob("*/manifest.jsonl"))]
     f = pd.concat(fontes, ignore_index=True) if fontes else pd.DataFrame()
     if not f.empty:
@@ -48,6 +48,8 @@ def _meta(cfg: Config) -> dict[str, pd.DataFrame]:
             ["fonte", "ref", "filename", "path", "sha256", "url", "bytes", "coletado_em"]
         ]
     ex = _jsonl(cfg.data_dir / "meta" / "execucoes.jsonl")
+    if execucao is not None:  # a execução em curso entra na mesma transação da carga
+        ex = pd.concat([ex, pd.DataFrame([execucao])], ignore_index=True)
     if not ex.empty:
         ex["extra"] = ex["extra"].map(lambda d: json.dumps(d, ensure_ascii=False, default=str))
         ex = ex[["em", "uf", "dominio", "status", "extra"]]
@@ -83,8 +85,8 @@ def _inserir(conn, schema: str, tabela: str, df: pd.DataFrame) -> None:
     conn.exec_driver_sql(f'DROP TABLE {schema}."{stg}"')
 
 
-def carregar(cfg: Config, t: dict, engine: Engine) -> None:
-    meta = _meta(cfg)
+def carregar(cfg: Config, t: dict, engine: Engine, execucao: dict | None = None) -> None:
+    meta = _meta(cfg, execucao)
     with engine.begin() as conn:
         tabelas = ", ".join([f"gold.{x}" for x in ORDEM] + [f"meta.{x}" for x in meta])
         conn.execute(text(f"TRUNCATE {tabelas}"))
