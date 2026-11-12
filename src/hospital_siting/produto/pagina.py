@@ -65,6 +65,13 @@ consorciados (ponderada pela cobertura) + receita SUS estimada pelo valor médio
 <h3>4. O que se maximiza</h3>
 <p>Leitos de déficit cobertos, menos uma penalidade por hospital que já existe a até 60 min da sede. Assim o modelo
 não escolhe sempre os polos já bem servidos.</p>
+<p><b>Prioridade por tipo de leito.</b> Cada leito coberto do tipo t entra no objetivo multiplicado por um peso
+π<sub>t</sub>: <code>max Σ π<sub>t</sub>·w·u − λ·Σ H·y − ε·custo</code>. O padrão é <b>todos 1</b>: todo leito de
+déficit vale igual, como na formulação original. Quanto vale um leito de UTI frente a um de enfermaria é decisão de
+política pública, então a ferramenta não traz valor recomendado: os pesos são ajustáveis na interface (0× a 5×) e na
+API (0 a 10). A penalidade λ fica na mesma unidade ponderada: com UTI em 3×, um hospital existente no raio pesa o
+mesmo que um terço de leito de UTI. Os números exibidos (leitos cobertos, déficit por tipo) continuam em leitos
+reais; quando algum peso é diferente de 1, as justificativas mostram também o total ponderado.</p>
 
 {_exemplo(exemplo)}
 
@@ -73,8 +80,10 @@ não escolhe sempre os polos já bem servidos.</p>
 <li>Com os 20% de receita municipal da spec, o consórcio <b>nunca</b> é o gargalo na Bahia: só a sede de um município
 de 30 mil habitantes já paga a operação de um H1. A restrição passa a decidir com menos de ~5%.</li>
 <li>Por leito, hospitais pequenos são mais baratos de construir e operar, e o objetivo conta todo leito igual: com
-orçamentos de até R$ 1 bi o modelo prefere muitos H1 espalhados. Hospitais maiores aparecem quando o orçamento cresce ou
-quando só se permitem portes maiores.</li>
+orçamentos de até R$ 1 bi o modelo prefere muitos H1 espalhados. Hospitais maiores aparecem quando o orçamento cresce,
+quando só se permitem portes maiores ou quando se dá mais peso à UTI na prioridade por tipo de leito. Com R$ 1 bi e
+UTI em 3×, saem 1 H4, 5 H2 e 1 H1 (em vez de 21 H1 e 1 H2), com 90 leitos de UTI em vez de 10 e 978 leitos cobertos
+em vez de 1.079.</li>
 <li>A primeira formulação levava 10–20 s; reescalar o dinheiro para milhões e trocar 36 mil restrições de ligação por
 restrições de demanda e capacidade derrubou para poucos segundos, com cobertura igual ou maior.</li>
 </ul>

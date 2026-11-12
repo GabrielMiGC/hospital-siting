@@ -17,3 +17,9 @@ def test_secao_fase2_tem_formulacao_custos_e_exemplo(gold_mini):
 def test_secao_fase2_sem_exemplo(gold_mini):
     html = secao_fase2(custos_portes(gold_mini, Premissas()), None)
     assert "H1" in html and "exemplo" not in html.lower()
+
+
+def test_secao_fase2_explica_prioridade(gold_mini):
+    html = secao_fase2(custos_portes(gold_mini, Premissas()), None)
+    assert "Prioridade por tipo de leito" in html and "todos 1" in html
+    assert "π" in html

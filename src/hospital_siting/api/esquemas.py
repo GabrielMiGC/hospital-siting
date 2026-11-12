@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from hospital_siting.produto.custos import CustoPorte, Premissas
+from hospital_siting.produto.custos import TIPOS_LEITO, CustoPorte, Premissas
 from hospital_siting.produto.otimizador import Parametros
 
 Porte = Literal["H1", "H2", "H3", "H4"]
@@ -33,6 +33,13 @@ class OtimizarEntrada(BaseModel):
     pop_min_candidato: int = Field(20_000, ge=5_000, le=500_000)
     fator_hospitalar: float = Field(2.5, ge=1.0, le=5.0)
     fator_pessoal_nao_normatizado: float = Field(1.0, ge=0, le=3.0)
+    # Prioridade por tipo de leito no objetivo. Padrão neutro (1 = todo leito vale igual): é escolha de política.
+    peso_clinico: float = Field(1.0, ge=0, le=10)
+    peso_cirurgico: float = Field(1.0, ge=0, le=10)
+    peso_obstetrico: float = Field(1.0, ge=0, le=10)
+    peso_pediatrico: float = Field(1.0, ge=0, le=10)
+    peso_uti_adulto: float = Field(1.0, ge=0, le=10)
+    peso_uti_neo_ped: float = Field(1.0, ge=0, le=10)
 
     @model_validator(mode="after")
     def _tempos(self) -> OtimizarEntrada:
@@ -60,6 +67,7 @@ class OtimizarEntrada(BaseModel):
             aporte_por_leito=self.aporte_por_leito,
             pop_min_candidato=self.pop_min_candidato,
             premissas=self.premissas(),
+            pesos_leito={t: getattr(self, f"peso_{t}") for t in TIPOS_LEITO},
         )
 
 
@@ -78,9 +86,7 @@ def limites() -> dict:
 
 
 def padroes() -> dict:
-    return {
-        n: c.default for n, c in OtimizarEntrada.model_fields.items() if n != "orcamento" and c.default is not None
-    }
+    return {n: c.default for n, c in OtimizarEntrada.model_fields.items() if n != "orcamento" and c.default is not None}
 
 
 def _limpo(v):

@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from hospital_siting.api.app import criar_app
+from hospital_siting.api.esquemas import OtimizarEntrada
+from hospital_siting.produto.custos import TIPOS_LEITO
 
 GEOJSON = {
     "type": "FeatureCollection",
@@ -76,6 +78,8 @@ def test_otimizar_orcamento_insuficiente_nao_e_erro(cliente):
         {"orcamento": 1e8, "portes": ["H9"]},
         {"orcamento": 1e8, "portes": ["H1"], "t_full": 200, "t_max": 100},
         {"orcamento": 1e8, "portes": ["H1"], "pct_receita": 3},
+        {"orcamento": 1e8, "portes": ["H1"], "peso_uti_adulto": -1},
+        {"orcamento": 1e8, "portes": ["H1"], "peso_clinico": 11},
     ],
 )
 def test_otimizar_rejeita_entrada_invalida_com_422(cliente, corpo):
@@ -86,3 +90,24 @@ def test_raiz_serve_a_interface(cliente):
     r = cliente.get("/")
     assert r.status_code == 200
     assert "text/html" in r.headers["content-type"]
+
+
+def test_parametros_expoe_pesos_por_tipo_neutros(cliente):
+    p = cliente.get("/api/parametros").json()
+    for t in TIPOS_LEITO:
+        assert p["padroes"][f"peso_{t}"] == 1
+        assert p["limites"][f"peso_{t}"] == {"min": 0, "max": 10}
+
+
+def test_pesos_viram_dict_em_parametros():
+    par = OtimizarEntrada(orcamento=1e8, peso_uti_adulto=3).parametros()
+    assert par.pesos_leito["uti_adulto"] == 3 and par.pesos_leito["clinico"] == 1
+
+
+def test_otimizar_com_peso_de_uti_muda_o_resultado_e_a_chave_do_cache(cliente):
+    # gold_mini: H2 (com UTI) ou H1; com orçamento para um só H2, UTI 5× força leitos de UTI.
+    base = cliente.post("/api/otimizar", json={"orcamento": 1e8, "portes": ["H1", "H2"]}).json()
+    uti = cliente.post("/api/otimizar", json={"orcamento": 1e8, "portes": ["H1", "H2"], "peso_uti_adulto": 5}).json()
+    assert uti["cache"] is False
+    assert uti["deficit_ponderado"] > base["deficit_ponderado"]
+    assert "prioridade" in uti["mensagem"] and "prioridade" not in base["mensagem"]

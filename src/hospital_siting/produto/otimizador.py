@@ -3,7 +3,8 @@
 y_jp ∈ {0,1}: abre o porte p no município j.  u_ijt ≥ 0: déficit do tipo t de i atendido por j.
 x_ij ∈ {0,1}: i adere ao consórcio de j (só onde a receita decide a viabilidade de j).
 
-max  Σ w_ij·u_ijt − λ·Σ H_j·y_jp − ε·Σ C_p·y_jp
+max  Σ π_t·w_ij·u_ijt − λ·Σ H_j·y_jp − ε·Σ C_p·y_jp
+     π_t: prioridade do tipo de leito t (padrão 1 = todo leito vale igual; escolha de política, ajustável)
 s.a. Σ_p y_jp ≤ 1                                   um hospital por município
      Σ_j u_ijt ≤ D_it                               não atende mais que o déficit
      Σ_i w_ij·u_ijt ≤ Σ_p L_pt·y_jp                 capacidade por tipo (porte sem UTI não cobre UTI)
@@ -45,6 +46,26 @@ class Parametros:
     premissas: Premissas = field(default_factory=Premissas)
     time_limit: float = 10.0
     gap: float = 0.01  # 1%: o HiGHS acha soluções a ~3% do limite em ~2 s; fechar 0,5% custa mais 10 s
+    # Prioridade π_t por tipo de leito no objetivo. Tipo ausente vale 1; todos 1 reproduz o modelo sem ponderação.
+    # Não há valor padrão diferente de 1: quanto vale um leito de UTI frente a um de enfermaria é decisão de política.
+    pesos_leito: dict[str, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        desconhecidos = set(self.pesos_leito) - set(TIPOS_LEITO)
+        if desconhecidos:
+            raise ValueError(f"tipo de leito desconhecido em pesos_leito: {sorted(desconhecidos)}")
+        if any(not (v >= 0) for v in self.pesos_leito.values()):
+            raise ValueError("os pesos por tipo de leito precisam ser ≥ 0")
+        completos = {t: float(self.pesos_leito.get(t, 1.0)) for t in TIPOS_LEITO}
+        object.__setattr__(self, "pesos_leito", completos)
+
+
+def peso_tipo(p: Parametros, tipo: str) -> float:
+    return p.pesos_leito.get(tipo, 1.0)
+
+
+def pesos_neutros(p: Parametros) -> bool:
+    return all(v == 1.0 for v in p.pesos_leito.values())
 
 
 @dataclass
@@ -82,6 +103,7 @@ class HospitalIndicado:
     custo: CustoPorte
     deficit_coberto: float
     deficit_por_tipo: dict[str, float]
+    deficit_ponderado: float  # Σ π_t × leitos do tipo t; igual a deficit_coberto com os pesos padrão
     municipios: list[Membro]
     populacao_atendida: float  # Σ população × peso de cobertura
     populacao_90min: int
@@ -116,6 +138,7 @@ class Resultado:
     mensagem: str
     custos_portes: dict[str, CustoPorte]
     data_base: str
+    deficit_ponderado: float = 0.0  # Σ π_t × leitos cobertos do tipo t
 
 
 @dataclass
@@ -271,7 +294,9 @@ def otimizar(gold: Gold, p: Parametros) -> Resultado:
     w_ij = dict(zip(zip(pares["i"], pares["j"], strict=True), pares["w"], strict=True))
 
     # u_ijt: déficit do tipo t de i atendido por j. Leitos usados = w·u (cobertura gradual).
+    pi = [peso_tipo(p, t) for t in TIPOS_LEITO]
     u = {}
+    ganho = []
     cap = defaultdict(list)
     por_demanda = defaultdict(list)
     for (i, j), w in w_ij.items():
@@ -283,6 +308,8 @@ def otimizar(gold: Gold, p: Parametros) -> Resultado:
             u[(i, j, ti)] = (w, v)
             cap[(j, ti)].append(w * v)
             por_demanda[(i, ti)].append(v)
+            if pi[ti] > 0:
+                ganho.append(pi[ti] * w * v)
     for (i, ti), vs in por_demanda.items():
         if len(vs) > 1:
             prob += pulp.lpSum(vs) <= float(inst.D[i, ti])
@@ -291,7 +318,7 @@ def otimizar(gold: Gold, p: Parametros) -> Resultado:
 
     eps = 0.01 / max(p.orcamento / MI, 1.0)
     prob += (
-        pulp.lpSum(cap_termo for termos in cap.values() for cap_termo in termos)
+        pulp.lpSum(ganho)
         - pulp.lpSum(p.peso_concentracao * inst.H[j] * y[(j, k)] for (j, k) in y)
         - pulp.lpSum(eps * total[k] * y[(j, k)] for (j, k) in y)
     )
@@ -349,6 +376,7 @@ def otimizar(gold: Gold, p: Parametros) -> Resultado:
         mensagem="",
         custos_portes=custos_todos,
         data_base=gold.data_base,
+        deficit_ponderado=sum(h.deficit_ponderado for h in hospitais),
     )
-    res.mensagem = mensagem_geral(res)
+    res.mensagem = mensagem_geral(res, p)
     return res
