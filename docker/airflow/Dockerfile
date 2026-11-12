@@ -15,4 +15,4 @@ USER airflow
 # repositório é montado sobre /opt/hospital_siting e as tasks chamam o CLI desse venv.
 COPY --chown=airflow:root pyproject.toml README.md /opt/hospital_siting/
 COPY --chown=airflow:root src /opt/hospital_siting/src
-RUN python -m venv /opt/hs-venv && /opt/hs-venv/bin/pip install --no-cache-dir -e /opt/hospital_siting
+RUN python -m venv /opt/hs-venv && /opt/hs-venv/bin/pip install --no-cache-dir -e "/opt/hospital_siting[pipeline]"

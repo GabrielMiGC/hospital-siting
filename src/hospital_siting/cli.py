@@ -53,5 +53,30 @@ def run(dominio: Dominio, uf: str | None = typer.Option(None, help="UF alvo (pad
         importlib.import_module(MODULOS[nome]).run(cfg)
 
 
+@app.command()
+def docs(
+    orcamento: float = typer.Option(1e9, help="Orçamento do exemplo resolvido (R$)"),
+    uf: str | None = typer.Option(None, help="UF alvo (padrão: config)"),
+) -> None:
+    """Gera docs/como-funciona/index.html, com a seção da Fase 2 calculada a partir da gold."""
+    from hospital_siting.core.config import REPO_ROOT
+    from hospital_siting.docs_page import render
+
+    cfg = load_config(uf=uf)
+    fase2 = None
+    try:
+        from hospital_siting.produto.custos import Premissas, custos_portes
+        from hospital_siting.produto.dados import carregar_gold
+        from hospital_siting.produto.otimizador import Parametros, otimizar
+        from hospital_siting.produto.pagina import secao_fase2
+
+        gold = carregar_gold(cfg.pg_dsn)
+        fase2 = secao_fase2(custos_portes(gold, Premissas()), otimizar(gold, Parametros(orcamento=orcamento)))
+    except Exception as e:  # noqa: BLE001 — sem banco, a página sai com o texto padrão
+        typer.echo(f"gold indisponível ({e.__class__.__name__}); seção da Fase 2 com texto padrão")
+    out = render(cfg, REPO_ROOT / "docs" / "como-funciona" / "index.html", fase2_html=fase2)
+    typer.echo(f"página gerada em {out}")
+
+
 if __name__ == "__main__":
     app()

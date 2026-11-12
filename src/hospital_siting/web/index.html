@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hospitais na Bahia</title>
+  <meta name="description" content="Dado um orçamento, onde construir hospitais gerais na Bahia e de que porte. Otimização com dados públicos (DATASUS, IBGE, SICONFI, OpenStreetMap).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="lateral">
+    <header class="marca">
+      <h1>Onde construir hospitais na Bahia?</h1>
+      <p>Dado um orçamento, o otimizador escolhe municípios e portes que cobrem o maior déficit de leitos SUS, com consórcio viável.</p>
+    </header>
+
+    <section class="bloco">
+      <h2>Parâmetros</h2>
+      <label class="campo orcamento">
+        <span class="rotulo">Orçamento total <small>obra + equipamentos + 12 meses</small></span>
+        <output id="orcamento-valor">R$ 1,00 bi</output>
+        <input id="orcamento" type="range" min="0" max="14" step="1" value="7" aria-label="Orçamento total">
+      </label>
+
+      <fieldset class="campo">
+        <legend class="rotulo">Portes permitidos</legend>
+        <div class="portes" id="portes"></div>
+      </fieldset>
+
+      <label class="campo">
+        <span class="rotulo">Prioridade de quem já tem hospitais perto <small id="pc-ajuda">penalidade por hospital existente a até 60 min</small></span>
+        <div class="linha"><input id="peso_concentracao" type="range" min="0" max="10" step="0.5" value="1"><output data-for="peso_concentracao"></output></div>
+      </label>
+
+      <details class="premissas">
+        <summary>Premissas ajustáveis</summary>
+        <label class="campo"><span class="rotulo">Receita municipal destinada ao consórcio</span>
+          <div class="linha"><input id="pct_receita" type="range" min="0" max="0.3" step="0.01" value="0.2"><output data-for="pct_receita"></output></div></label>
+        <label class="campo"><span class="rotulo">Cobertura total até</span>
+          <div class="linha"><input id="t_full" type="range" min="0" max="120" step="5" value="30"><output data-for="t_full"></output></div></label>
+        <label class="campo"><span class="rotulo">Cobertura chega a zero em</span>
+          <div class="linha"><input id="t_max" type="range" min="60" max="300" step="10" value="180"><output data-for="t_max"></output></div></label>
+        <label class="campo"><span class="rotulo">Taxa de ocupação (receita SUS)</span>
+          <div class="linha"><input id="ocupacao" type="range" min="0.5" max="1" step="0.05" value="0.8"><output data-for="ocupacao"></output></div></label>
+        <label class="campo"><span class="rotulo">Fator hospitalar sobre o m² do SINAPI <small>o SINAPI é custo residencial</small></span>
+          <div class="linha"><input id="fator_hospitalar" type="range" min="1.5" max="4" step="0.1" value="2.5"><output data-for="fator_hospitalar"></output></div></label>
+        <label class="campo"><span class="rotulo">Equipe fora das normas <small>médicos de enfermaria, apoio, administração</small></span>
+          <div class="linha"><input id="fator_pessoal_nao_normatizado" type="range" min="0" max="2" step="0.1" value="1"><output data-for="fator_pessoal_nao_normatizado"></output></div></label>
+        <label class="campo"><span class="rotulo">População mínima do município candidato</span>
+          <div class="linha"><input id="pop_min_candidato" type="range" min="10000" max="100000" step="5000" value="20000"><output data-for="pop_min_candidato"></output></div></label>
+        <button type="button" id="restaurar" class="discreto">Restaurar padrões</button>
+      </details>
+    </section>
+
+    <section class="bloco">
+      <h2>Mapa</h2>
+      <div class="camadas" role="radiogroup" aria-label="Camada do mapa">
+        <label><input type="radio" name="camada" value="deficit_total" checked> Déficit de leitos</label>
+        <label><input type="radio" name="camada" value="deficit_uti"> Déficit de UTI</label>
+        <label><input type="radio" name="camada" value="populacao"> População</label>
+        <label><input type="radio" name="camada" value="hospitais"> Hospitais existentes</label>
+      </div>
+      <label class="chave"><input type="checkbox" id="ver-consorcios" checked> Ligações do consórcio</label>
+      <label class="chave"><input type="checkbox" id="ver-descartes" checked> Candidatos descartados</label>
+      <div class="legenda" id="legenda"></div>
+    </section>
+
+    <footer class="rodape">
+      <a href="como-funciona/">Como funciona</a> ·
+      <a href="docs" target="_blank" rel="noopener">API</a> ·
+      <a href="https://github.com/GabrielMiGC/hospital-siting" target="_blank" rel="noopener">Código</a>
+      <p>Apoio à decisão com dados públicos, não recomendação oficial. Valores em reais de <span id="data-base">—</span>.</p>
+    </footer>
+  </aside>
+
+  <main class="palco">
+    <div id="mapa" aria-label="Mapa da Bahia"></div>
+
+    <section class="explicacao" aria-live="polite">
+      <div class="kpis" id="kpis"></div>
+      <p id="mensagem">Carregando a base…</p>
+      <p class="meta" id="meta"></p>
+    </section>
+
+    <section class="indicacoes" id="indicacoes" hidden>
+      <h2>Indicações <span id="n-indicacoes"></span></h2>
+      <ol id="lista"></ol>
+      <div id="descartes"></div>
+    </section>
+
+    <div class="calculando" id="calculando" hidden>
+      <div class="girador" aria-hidden="true"></div>
+      <span>Otimizando <b id="cand-n">165</b> candidatos × 4 portes… <span id="cronometro">0 s</span></span>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>

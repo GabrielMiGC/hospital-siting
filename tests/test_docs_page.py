@@ -19,3 +19,11 @@ def test_render_includes_sources_and_checks(cfg_tmp, tmp_path):
 def test_render_without_metadata(cfg_tmp, tmp_path):
     html = render(cfg_tmp, tmp_path / "index.html").read_text(encoding="utf-8")
     assert "Ainda não executado" in html
+
+
+def test_render_preenche_a_secao_da_fase2(cfg_tmp, tmp_path):
+    html = render(cfg_tmp, tmp_path / "index.html", fase2_html="<p id='f2'>secao da fase 2</p>").read_text(
+        encoding="utf-8"
+    )
+    assert "<p id='f2'>secao da fase 2</p>" in html
+    assert "{{FASE2}}" not in html
