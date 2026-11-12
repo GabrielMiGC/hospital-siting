@@ -5,6 +5,7 @@ Custos da gold de teste (Premissas padrão): H1 ≈ R$ 2,25 mi (10 leitos clíni
 
 import pytest
 
+from hospital_siting.produto.custos import TIPOS_LEITO
 from hospital_siting.produto.otimizador import Parametros, otimizar
 from tests.produto.conftest import fazer_gold
 
@@ -207,3 +208,32 @@ def test_pesos_ausentes_valem_um():
 def test_peso_zero_nao_quebra():
     res = otimizar(_gold_uti(), Parametros(orcamento=7e6, portes=["H1", "H2"], pesos_leito={"uti_adulto": 0}))
     assert _abertos(res) == [("A", "H1"), ("D", "H1"), ("E", "H1")]
+
+
+def test_justificativa_cita_prioridade_so_quando_ha():
+    g = _gold_uti()
+    uti = otimizar(g, Parametros(orcamento=7e6, portes=["H1", "H2"], pesos_leito={"uti_adulto": 3}))
+    j = uti.hospitais[0].justificativa
+    assert "prioridade" in j and "UTI adulto 3×" in j and "40 leitos ponderados" in j
+    assert "ponderad" in uti.mensagem
+
+    neutro = otimizar(g, Parametros(orcamento=7e6, portes=["H1", "H2"]))
+    explicito = otimizar(g, Parametros(orcamento=7e6, portes=["H1", "H2"], pesos_leito=dict.fromkeys(TIPOS_LEITO, 1)))
+    assert all("prioridade" not in h.justificativa for h in neutro.hospitais)
+    assert "ponderad" not in neutro.mensagem
+    assert [h.justificativa for h in explicito.hospitais] == [h.justificativa for h in neutro.hospitais]
+
+
+def test_descarte_pontua_o_potencial_ponderado():
+    # Só cabe um H2 (R$ 6,9 mi). C tem mais déficit clínico; A tem UTI. Com UTI 3×, A vence e C vira descarte.
+    g = fazer_gold(
+        municipios=[("A", "A", 30_000, RICO, 0, 0), ("C", "C", 30_000, RICO, 0, 9)],
+        deficit=[("A", "clinico", 5), ("A", "uti_adulto", 10), ("C", "clinico", 20)],
+        tempos={("A", "C"): 400},
+    )
+    neutro = otimizar(g, Parametros(orcamento=6.9e6, portes=["H2"]))
+    assert _abertos(neutro) == [("C", "H2")]
+    uti = otimizar(g, Parametros(orcamento=6.9e6, portes=["H2"], pesos_leito={"uti_adulto": 3}))
+    assert _abertos(uti) == [("A", "H2")]
+    assert uti.descartados[0].cod_ibge == "C"
+    assert uti.descartados[0].deficit_potencial == pytest.approx(20)  # em leitos reais

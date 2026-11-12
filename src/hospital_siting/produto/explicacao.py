@@ -92,6 +92,15 @@ def montar_hospitais(inst, escolhidos, membros_de, cobertura, w_ij, custos: dict
     return out
 
 
+def _num(v: float) -> str:
+    return f"{v:g}".replace(".", ",")
+
+
+def descricao_prioridade(p) -> str:
+    """'UTI adulto 3×, UTI neo/ped 2×' com os tipos de peso diferente de 1 (vazio quando todos valem 1)."""
+    return ", ".join(f"{ROTULO_TIPO[t]} {_num(v)}×" for t, v in p.pesos_leito.items() if v != 1.0)
+
+
 def _justificativa(h, p) -> str:
     tipos = sorted(h.deficit_por_tipo.items(), key=lambda kv: -kv[1])[:3]
     detalhe = ", ".join(f"{ROTULO_TIPO[t]} {v:.0f}" for t, v in tipos)
@@ -105,6 +114,9 @@ def _justificativa(h, p) -> str:
         partes.append(f"{h.hospitais_no_raio} hospitais existentes a até {p.t_conc:.0f} min")
     else:
         partes.append(f"nenhum hospital existente a até {p.t_conc:.0f} min")
+    prioridade = descricao_prioridade(p)
+    if prioridade:
+        partes.append(f"com a prioridade escolhida ({prioridade}), vale {h.deficit_ponderado:.0f} leitos ponderados")
     return "; ".join(partes) + "."
 
 
@@ -131,21 +143,24 @@ def descartes(inst, hospitais, custos: dict[str, CustoPorte], gold, p, restante:
         for k, c in custos.items():
             if c.total > p.orcamento:
                 continue
-            pot = float(sum(min(c.leitos_por_tipo.get(t, 0), demanda[ti]) for ti, t in enumerate(TIPOS_LEITO)))
+            cobre = [min(c.leitos_por_tipo.get(t, 0), demanda[ti]) for ti, t in enumerate(TIPOS_LEITO)]
+            pot = float(sum(cobre))
+            pot_pond = float(sum(p.pesos_leito.get(t, 1.0) * v for t, v in zip(TIPOS_LEITO, cobre, strict=True)))
             receitas = contrib + c.receita_sus_anual + pct_estado * c.operacao_anual + p.aporte_por_leito * c.leitos
             razao = receitas / c.operacao_anual
-            score = pot - p.peso_concentracao * inst.H[j]
+            score = pot_pond - p.peso_concentracao * inst.H[j]  # mesma unidade (ponderada) do objetivo
             chave = (razao >= 1, score / c.total)  # porte mais eficiente (déficit coberto por real)
             if melhor is None or chave > melhor[0]:
-                melhor = (chave, k, pot, razao, score)
+                melhor = (chave, k, pot, razao, pot_pond)
         if melhor is None or melhor[2] <= 0:
             continue
-        _, k, pot, razao, score = melhor
-        avaliados.append((score / custos[k].total, j, k, pot, razao, sobreposto))
+        _, k, pot, razao, pot_pond = melhor
+        score = pot_pond - p.peso_concentracao * inst.H[j]
+        avaliados.append((score / custos[k].total, j, k, pot, pot_pond, razao, sobreposto))
 
     avaliados.sort(key=lambda a: -a[0])
     out = []
-    for _, j, k, pot, razao, sobreposto in avaliados[:n]:
+    for _, j, k, pot, pot_pond, razao, sobreposto in avaliados[:n]:
         c = custos[k]
         H = int(inst.H[j])
         penal = p.peso_concentracao * H
@@ -153,7 +168,7 @@ def descartes(inst, hospitais, custos: dict[str, CustoPorte], gold, p, restante:
             motivo = f"consórcio cobriria só {razao * 100:.0f}% do custo anual de operação do {k}"
         elif c.total > restante:
             motivo = f"seria a próxima indicação ({k}) com mais {reais(c.total - max(restante, 0))} de orçamento"
-        elif penal > 0.1 * pot:
+        elif penal > 0.1 * pot_pond:
             motivo = f"penalizada por já ter {H} hospitais a até {p.t_conc:.0f} min"
         elif sobreposto:
             motivo = "parte da região já é atendida pelas indicações escolhidas"
@@ -173,7 +188,7 @@ def descartes(inst, hospitais, custos: dict[str, CustoPorte], gold, p, restante:
     return out
 
 
-def mensagem_geral(res) -> str:
+def mensagem_geral(res, p=None) -> str:
     if not res.hospitais:
         if res.descartados:
             d = res.descartados[0]
@@ -186,4 +201,11 @@ def mensagem_geral(res) -> str:
         f"Com {reais(res.orcamento)}, {'a indicação cobre' if n == 1 else f'as {n} indicações cobrem'} "
         f"{res.deficit_coberto:.0f} dos {res.deficit_total:.0f} leitos de déficit da UF ({pct:.1f}%), "
         f"usando {reais(res.custo_total)} ({uso:.0f}% do orçamento)."
-    )
+    ) + _sufixo_prioridade(res, p)
+
+
+def _sufixo_prioridade(res, p) -> str:
+    prioridade = descricao_prioridade(p) if p is not None else ""
+    if not prioridade:
+        return ""
+    return f" Com a prioridade escolhida ({prioridade}), isso vale {res.deficit_ponderado:.0f} leitos ponderados."

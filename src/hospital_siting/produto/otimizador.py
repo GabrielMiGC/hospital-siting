@@ -378,5 +378,5 @@ def otimizar(gold: Gold, p: Parametros) -> Resultado:
         data_base=gold.data_base,
         deficit_ponderado=sum(h.deficit_ponderado for h in hospitais),
     )
-    res.mensagem = mensagem_geral(res)
+    res.mensagem = mensagem_geral(res, p)
     return res
