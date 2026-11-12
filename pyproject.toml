@@ -25,6 +25,10 @@ dependencies = [
     "typer>=0.12",
     "pyyaml>=6.0",
     "py7zr>=0.22",
+    "pulp>=4.2.0",
+    "highspy>=1.16.0",
+    "fastapi>=0.162.5",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
@@ -33,6 +37,7 @@ dev = [
     "pytest>=8.3",
     "respx>=0.21",
     "dbf>=0.99",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
