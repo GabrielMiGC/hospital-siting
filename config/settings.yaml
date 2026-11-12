@@ -1,0 +1,27 @@
+# Configuração do pipeline. A UF ativa pode ser sobrescrita via CLI (--uf).
+uf: BA
+ufs:
+  BA:
+    cod_uf: "29"
+    n_municipios: 417
+
+# "auto" = mês mais recente do SINAPI também presente no IPCA e no INCC
+data_base: auto
+sih_competencias: 36
+
+data_dir: data
+seeds_dir: seeds
+pg_dsn: postgresql+psycopg://postgres:postgres@localhost:5432/hospital_siting
+
+params:
+  t_oferta_min: 120        # raio do 2SFCA para oferta existente (min)
+  t_max_min: 180           # tempo máximo de cobertura (min)
+  t_full_min: 30           # até aqui a cobertura conta 100% (min)
+  pct_receita_municipal: 0.20
+  ocupacao: 0.80
+  fator_osrm: 1.0          # aplicado só na Fase 2
+  osm_buffer_km: 50
+  cenario_necessidade: 2   # Portaria 1.631/2015: 1=P25, 2=mediana, 3=P75
+  encargos_pct: 0.70       # encargos trabalhistas sobre salário (hipótese documentada; ajustável na Fase 2)
+  rais_ano: 2024
+  rais_url: ftp://ftp.mtps.gov.br/pdet/microdados/RAIS/2024/RAIS_VINC_PUB_NORDESTE.7z   # arquivo regional da UF

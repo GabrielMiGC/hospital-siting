@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como funciona — hospital-siting</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header>
+  <h1>Onde construir hospitais na Bahia?</h1>
+  <p class="lead">Um pipeline de dados reproduzível que cruza demografia (IBGE), rede hospitalar (CNES/DATASUS),
+  internações (SIH/SUS), receitas municipais (SICONFI), custos de obra e equipamentos e tempo de viagem por
+  estrada para alimentar um otimizador de localização de hospitais gerais.</p>
+  <div class="kpis"><div class='kpi'><b>417</b><span>municípios</span></div><div class='kpi'><b>11</b><span>fontes coletadas</span></div><div class='kpi'><b>25/31</b><span>checagens aprovadas</span></div><div class='kpi'><b>2026-09</b><span>data-base monetária</span></div></div>
+</header>
+
+<h2>O problema</h2>
+<p>Dado um orçamento (obra + equipamentos + 12 meses de operação), indicar quantos hospitais construir, de que porte
+e em quais municípios, maximizando o <strong>déficit de leitos coberto</strong> a até 3 h de viagem, desde que o
+<strong>consórcio</strong> de municípios atendidos consiga manter o hospital a partir do 2º ano.</p>
+
+<h2>Pipeline</h2>
+<div class="pipeline"><span>Fontes públicas</span><i>→</i><span>raw<br><small>original + hash</small></span><i>→</i>
+<span>bronze<br><small>Parquet</small></span><i>→</i><span>silver<br><small>Pandera</small></span><i>→</i>
+<span>gold<br><small>PostGIS + contrato</small></span></div>
+<p>Orquestrado por DAGs do Airflow (ou CLI), idempotente: reexecutar não baixa nada de novo nem duplica linhas.</p>
+
+<h2>Dados coletados</h2>
+<div class="wrap"><table><thead><tr><th>Fonte</th><th>Arquivos</th><th>Referências</th><th>Coletado em</th><th>Origem</th></tr></thead>
+<tbody><tr><td>cnes</td><td>2</td><td>2026-09</td><td>2026-11-11</td><td>ftp.datasus.gov.br</td></tr><tr><td>ibge_sidra</td><td>3</td><td>pib, pop_censo, pop_estimativa</td><td>2026-11-11</td><td>apisidra.ibge.gov.br</td></tr><tr><td>incc</td><td>1</td><td>sgs_192</td><td>2026-11-11</td><td>api.bcb.gov.br</td></tr><tr><td>ipca</td><td>1</td><td>sidra_1737</td><td>2026-11-11</td><td>apisidra.ibge.gov.br</td></tr><tr><td>osm</td><td>1</td><td>nordeste</td><td>2026-11-11</td><td>download.geofabrik.de</td></tr><tr><td>rais</td><td>1</td><td>2024</td><td>2026-11-11</td><td>ftp.mtps.gov.br</td></tr><tr><td>renem</td><td>1</td><td>atual</td><td>2026-11-11</td><td>portalfns.saude.gov.br</td></tr><tr><td>siconfi</td><td>417</td><td>2025</td><td>2026-11-11</td><td>apidatalake.tesouro.gov.br</td></tr><tr><td>sigtap</td><td>1</td><td>202611</td><td>2026-11-11</td><td>ftp2.datasus.gov.br</td></tr><tr><td>sih</td><td>36</td><td>2023-10, 2023-11, 2023-12, 2024-01, 2024-02, 2024-03</td><td>2026-11-11</td><td>ftp.datasus.gov.br</td></tr><tr><td>sinapi</td><td>1</td><td>sidra2296</td><td>2026-11-11</td><td>apisidra.ibge.gov.br</td></tr></tbody></table></div>
+
+<h2>Validações</h2>
+<div class="wrap"><table><thead><tr><th>Dataset</th><th>Checagem</th><th>Status</th><th>Detalhe</th></tr></thead>
+<tbody><tr><td>municipio</td><td>schema:municipio</td><td class='s-pass'>pass</td><td>417 linhas</td></tr><tr><td>municipio_geo</td><td>schema:municipio_geo</td><td class='s-pass'>pass</td><td>417 linhas</td></tr><tr><td>regiao_saude</td><td>schema:regiao_saude</td><td class='s-pass'>pass</td><td>417 linhas</td></tr><tr><td>indice</td><td>schema:indice</td><td class='s-pass'>pass</td><td>944 linhas</td></tr><tr><td>sigtap_procedimento</td><td>schema:sigtap_procedimento</td><td class='s-pass'>pass</td><td>5068 linhas</td></tr><tr><td>receita_municipal</td><td>schema:receita_municipal</td><td class='s-pass'>pass</td><td>413 linhas</td></tr><tr><td>receita_municipal</td><td>municipios_sem_receita</td><td class='s-warn'>warn</td><td>4: 2901205, 2901809, 2905206, 2916005</td></tr><tr><td>cnes_leitos</td><td>schema:cnes_leitos</td><td class='s-pass'>pass</td><td>3985 linhas</td></tr><tr><td>cnes_estabelecimento</td><td>schema:cnes_estabelecimento</td><td class='s-pass'>pass</td><td>792 linhas</td></tr><tr><td>custo_obra_m2</td><td>cub_ausente</td><td class='s-warn'>warn</td><td>seeds/cub_ba.csv não existe; só SINAPI</td></tr><tr><td>sih_agg</td><td>schema:sih_agg</td><td class='s-pass'>pass</td><td>296437 linhas</td></tr><tr><td>sih_agg</td><td>descarte:residencia_fora_uf</td><td class='s-warn'>warn</td><td>31581 AIHs descartadas</td></tr><tr><td>custo_obra_m2</td><td>schema:custo_obra_m2</td><td class='s-pass'>pass</td><td>24 linhas</td></tr><tr><td>equipamento_ambiente</td><td>schema:equipamento_ambiente</td><td class='s-pass'>pass</td><td>55 linhas</td></tr><tr><td>salario_ocupacao</td><td>schema:salario_ocupacao</td><td class='s-pass'>pass</td><td>7 linhas</td></tr><tr><td>equipamento_ambiente</td><td>cobertura_preco:uti</td><td class='s-warn'>warn</td><td>29/30 equipamentos com preço</td></tr><tr><td>equipamento_ambiente</td><td>cobertura_preco:centro cirúrgico</td><td class='s-pass'>pass</td><td>6/6 equipamentos com preço</td></tr><tr><td>equipamento_ambiente</td><td>cobertura_preco:imagem</td><td class='s-pass'>pass</td><td>4/4 equipamentos com preço</td></tr><tr><td>equipamento_ambiente</td><td>cobertura_preco:ps</td><td class='s-pass'>pass</td><td>14/14 equipamentos com preço</td></tr><tr><td>matriz_tempo</td><td>schema:matriz_tempo</td><td class='s-pass'>pass</td><td>173889 linhas</td></tr><tr><td>gold</td><td>dim_municipio_contagem</td><td class='s-pass'>pass</td><td>417 linhas, esperado 417</td></tr><tr><td>gold</td><td>orfaos_leitos_existentes</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>orfaos_estabelecimentos_hospitalares</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>orfaos_deficit_leitos</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>orfaos_fluxo_internacoes</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>orfaos_matriz_tempo_viagem</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>matriz_completa</td><td class='s-pass'>pass</td><td>173889 pares, esperado 173889</td></tr><tr><td>gold</td><td>data_base_unica</td><td class='s-pass'>pass</td><td>[&#x27;2026-09&#x27;]</td></tr><tr><td>gold</td><td>geometrias_validas</td><td class='s-pass'>pass</td><td></td></tr><tr><td>gold</td><td>municipios_sem_receita</td><td class='s-warn'>warn</td><td>4: 2901205, 2901809, 2905206, 2916005</td></tr><tr><td>gold</td><td>polos_com_deficit</td><td class='s-warn'>warn</td><td>2927408, 2933307, 2928703, 2918001, 2914802, 2903201, 2919207, 2914703, 2914604</td></tr></tbody></table></div>
+
+<h2>Decisões e porquês</h2>
+<div class="dec"><b>Déficit por acessibilidade (2SFCA)</b>Leitos existentes contam para todos os municípios a até
+120 min, proporcionalmente à população; um município sem hospital mas vizinho de um bom hospital não aparece com
+déficit inflado.</div>
+<div class="dec"><b>Tempo de viagem por estrada, não km em linha reta</b>OSRM local sobre o OpenStreetMap (Bahia +
+50 km): rios, serras e malha viária mudam tudo.</div>
+<div class="dec"><b>Viabilidade por consórcio</b>% da receita dos municípios atendidos + aporte estadual + receita SUS
+estimada precisam cobrir o custo anual de operação.</div>
+<div class="dec"><b>Valores na mesma data-base</b>Obra corrigida pelo INCC; o restante pelo IPCA.</div>
+<div class="dec"><b>Parâmetros curados com fonte linha a linha</b>Portaria GM/MS 1.631/2015, RDC ANVISA 7/2010,
+Parecer COFEN 1/2024 e consórcios das Policlínicas da Bahia, em <code>seeds/</code>.</div>
+
+<h2>Avaliado e descartado</h2>
+<div class="dec"><b>Apache Spark</b>O volume (CNES e SIH da Bahia) cabe em memória; DuckDB entrega SQL colunar local
+sem custo operacional de cluster.</div>
+<div class="dec"><b>Great Expectations</b>Configuração pesada para o tamanho do projeto; Pandera valida no próprio código.</div>
+<div class="dec"><b>Google Maps Distance Matrix</b>~174 mil pares custariam centenas de dólares e os termos proíbem
+armazenar os resultados.</div>
+<div class="dec"><b>SomaSUS</b>A API exige login gov.br; usamos a lista pública RENEM (FNS) como referência de preços.</div>
+
+<h2>Limitações conhecidas</h2>
+<ul>
+<li>População tratada como concentrada na sede municipal.</li>
+<li>Tempo de viagem em estrada livre (fator de correção configurável na Fase 2).</li>
+<li>Fluxo de pacientes entre estados ignorado.</li>
+<li>Parâmetros financeiros (participação municipal, aporte estadual, ocupação, encargos) são hipóteses.</li>
+<li>Custeio não pessoal e área por leito com fontes frágeis — tratados como parâmetros.</li>
+</ul>
+
+<h2>Como o resultado é calculado</h2>
+<p>O otimizador (Fase 2) consome a camada gold; esta seção será preenchida por ele.</p>
+
+<footer>Gerado em 2026-11-11 19:44 UTC · UF BA · data-base monetária 2026-09</footer>
+</main>
+</body>
+</html>

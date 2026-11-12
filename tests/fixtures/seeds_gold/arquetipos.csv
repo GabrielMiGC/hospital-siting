@@ -1,0 +1,3 @@
+porte,tipo_leito,leitos,area_m2_ref,fonte,documento,pagina_ou_artigo,observacao
+H1,clinico,30,2400,fixture,teste,-,
+H1,cirurgico,20,1600,fixture,teste,-,

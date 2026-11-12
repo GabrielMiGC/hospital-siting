@@ -1,0 +1,7 @@
+tipo_leito,leitos_por_mil_hab,fonte,documento,pagina_ou_artigo,observacao
+clinico,2.0,fixture,teste,-,
+cirurgico,2.0,fixture,teste,-,
+obstetrico,2.0,fixture,teste,-,
+pediatrico,2.0,fixture,teste,-,
+uti_adulto,2.0,fixture,teste,-,
+uti_neo_ped,2.0,fixture,teste,-,

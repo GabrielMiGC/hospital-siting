@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como funciona — hospital-siting</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header>
+  <h1>Onde construir hospitais na Bahia?</h1>
+  <p class="lead">Um pipeline de dados reproduzível que cruza demografia (IBGE), rede hospitalar (CNES/DATASUS),
+  internações (SIH/SUS), receitas municipais (SICONFI), custos de obra e equipamentos e tempo de viagem por
+  estrada para alimentar um otimizador de localização de hospitais gerais.</p>
+  <div class="kpis">{{KPIS}}</div>
+</header>
+
+<h2>O problema</h2>
+<p>Dado um orçamento (obra + equipamentos + 12 meses de operação), indicar quantos hospitais construir, de que porte
+e em quais municípios, maximizando o <strong>déficit de leitos coberto</strong> a até 3 h de viagem, desde que o
+<strong>consórcio</strong> de municípios atendidos consiga manter o hospital a partir do 2º ano.</p>
+
+<h2>Pipeline</h2>
+<div class="pipeline"><span>Fontes públicas</span><i>→</i><span>raw<br><small>original + hash</small></span><i>→</i>
+<span>bronze<br><small>Parquet</small></span><i>→</i><span>silver<br><small>Pandera</small></span><i>→</i>
+<span>gold<br><small>PostGIS + contrato</small></span></div>
+<p>Orquestrado por DAGs do Airflow (ou CLI), idempotente: reexecutar não baixa nada de novo nem duplica linhas.</p>
+
+<h2>Dados coletados</h2>
+<div class="wrap"><table><thead><tr><th>Fonte</th><th>Arquivos</th><th>Referências</th><th>Coletado em</th><th>Origem</th></tr></thead>
+<tbody>{{FONTES}}</tbody></table></div>
+
+<h2>Validações</h2>
+<div class="wrap"><table><thead><tr><th>Dataset</th><th>Checagem</th><th>Status</th><th>Detalhe</th></tr></thead>
+<tbody>{{VALIDACOES}}</tbody></table></div>
+
+<h2>Decisões e porquês</h2>
+<div class="dec"><b>Déficit por acessibilidade (2SFCA)</b>Leitos existentes contam para todos os municípios a até
+120 min, proporcionalmente à população; um município sem hospital mas vizinho de um bom hospital não aparece com
+déficit inflado.</div>
+<div class="dec"><b>Tempo de viagem por estrada, não km em linha reta</b>OSRM local sobre o OpenStreetMap (Bahia +
+50 km): rios, serras e malha viária mudam tudo.</div>
+<div class="dec"><b>Viabilidade por consórcio</b>% da receita dos municípios atendidos + aporte estadual + receita SUS
+estimada precisam cobrir o custo anual de operação.</div>
+<div class="dec"><b>Valores na mesma data-base</b>Obra corrigida pelo INCC; o restante pelo IPCA.</div>
+<div class="dec"><b>Parâmetros curados com fonte linha a linha</b>Portaria GM/MS 1.631/2015, RDC ANVISA 7/2010,
+Parecer COFEN 1/2024 e consórcios das Policlínicas da Bahia, em <code>seeds/</code>.</div>
+
+<h2>Avaliado e descartado</h2>
+<div class="dec"><b>Apache Spark</b>O volume (CNES e SIH da Bahia) cabe em memória; DuckDB entrega SQL colunar local
+sem custo operacional de cluster.</div>
+<div class="dec"><b>Great Expectations</b>Configuração pesada para o tamanho do projeto; Pandera valida no próprio código.</div>
+<div class="dec"><b>Google Maps Distance Matrix</b>~174 mil pares custariam centenas de dólares e os termos proíbem
+armazenar os resultados.</div>
+<div class="dec"><b>SomaSUS</b>A API exige login gov.br; usamos a lista pública RENEM (FNS) como referência de preços.</div>
+
+<h2>Limitações conhecidas</h2>
+<ul>
+<li>População tratada como concentrada na sede municipal.</li>
+<li>Tempo de viagem em estrada livre (fator de correção configurável na Fase 2).</li>
+<li>Fluxo de pacientes entre estados ignorado.</li>
+<li>Parâmetros financeiros (participação municipal, aporte estadual, ocupação, encargos) são hipóteses.</li>
+<li>Custeio não pessoal e área por leito com fontes frágeis — tratados como parâmetros.</li>
+</ul>
+
+<h2>Como o resultado é calculado</h2>
+<p>{{FASE2}}</p>
+
+<footer>Gerado em {{GERADO_EM}} · UF {{UF}} · data-base monetária {{DATA_BASE}}</footer>
+</main>
+</body>
+</html>

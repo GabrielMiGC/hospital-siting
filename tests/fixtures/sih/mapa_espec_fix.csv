@@ -1,0 +1,5 @@
+espec,descricao,tipo_leito
+01,Cirurgico,cirurgico
+02,Obstetrico,obstetrico
+03,Clinico,clinico
+07,Pediatrico,pediatrico

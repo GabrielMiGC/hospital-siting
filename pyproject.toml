@@ -1,0 +1,52 @@
+[project]
+name = "hospital-siting"
+version = "0.1.0"
+description = "Base de dados e otimização para localização de hospitais gerais (Fase 1: pipeline de dados)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.27",
+    "duckdb>=1.1",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "pyarrow>=17",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "geobr>=0.2.2",
+    "pandera>=0.20",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "datasus-dbc>=0.1",
+    "dbfread>=2.0",
+    "openpyxl>=3.1",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "geoalchemy2>=0.15",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "py7zr>=0.22",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.3",
+    "respx>=0.21",
+    "dbf>=0.99",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hospital_siting"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+pythonpath = ["src"]
+markers = [
+    "online: acessa fontes reais na internet (fora do CI)",
+    "db: exige PostgreSQL/PostGIS rodando",
+]
