@@ -103,9 +103,12 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .marcador-h { background: var(--acento); color: #fff; border: 2px solid #fff; border-radius: 50%; display: grid; place-items: center; font: 600 11px var(--mono); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 
 @media (max-width: 900px) {
-  body { grid-template-columns: 1fr; grid-template-rows: auto 70vh; }
+  body { display: block; }
   .lateral { border-right: 0; border-bottom: 1px solid var(--linha); padding: 16px; }
-  .palco { grid-row: 2; }
-  .explicacao { left: 8px; right: 8px; max-width: none; top: 8px; }
-  .indicacoes { position: static; width: auto; margin: 8px; box-shadow: none; border: 1px solid var(--linha); }
+  .palco { display: flex; flex-direction: column; }
+  #mapa { position: relative; height: 65vh; order: 2; }
+  .explicacao, .indicacoes { position: static; max-width: none; width: auto; margin: 8px; box-shadow: none; border: 1px solid var(--linha); }
+  .explicacao { order: 1; }
+  .indicacoes { order: 3; }
+  .calculando { position: fixed; }
 }
