@@ -78,9 +78,7 @@ def limites() -> dict:
 
 
 def padroes() -> dict:
-    return {
-        n: c.default for n, c in OtimizarEntrada.model_fields.items() if n != "orcamento" and c.default is not None
-    }
+    return {n: c.default for n, c in OtimizarEntrada.model_fields.items() if n != "orcamento" and c.default is not None}
 
 
 def _limpo(v):

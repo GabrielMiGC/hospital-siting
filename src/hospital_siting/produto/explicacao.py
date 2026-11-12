@@ -79,6 +79,7 @@ def montar_hospitais(inst, escolhidos, membros_de, cobertura, w_ij, custos: dict
             custo=c,
             deficit_coberto=sum(por_tipo.values()),
             deficit_por_tipo={t: v for t, v in por_tipo.items() if v > 1e-6},
+            deficit_ponderado=sum(p.pesos_leito.get(t, 1.0) * v for t, v in por_tipo.items()),
             municipios=membros,
             populacao_atendida=sum(m.populacao * m.peso for m in membros if m.consorciado),
             populacao_90min=sum(m.populacao for m in membros if m.consorciado and m.minutos <= 90),
