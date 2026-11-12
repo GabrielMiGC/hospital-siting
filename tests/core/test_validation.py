@@ -15,8 +15,15 @@ def _linhas(cfg, nome):
 
 def test_validate_records_fail_and_raises(cfg_tmp):
     bad = pd.DataFrame(
-        {"cod_ibge": ["123"], "nome": ["x"], "uf": ["BA"], "populacao": pd.array([0], dtype="Int64"),
-         "ano_populacao": [2022], "pib": [1.0], "ano_pib": [2021]}
+        {
+            "cod_ibge": ["123"],
+            "nome": ["x"],
+            "uf": ["BA"],
+            "populacao": pd.array([0], dtype="Int64"),
+            "ano_populacao": [2022],
+            "pib": [1.0],
+            "ano_pib": [2021],
+        }
     )
     with pytest.raises(pandera.errors.SchemaErrors):
         validate(cfg_tmp, MUNICIPIO, bad, "municipio")
@@ -25,8 +32,15 @@ def test_validate_records_fail_and_raises(cfg_tmp):
 
 def test_validate_records_pass(cfg_tmp):
     ok = pd.DataFrame(
-        {"cod_ibge": ["2927408"], "nome": ["Salvador"], "uf": ["BA"], "populacao": pd.array([2417678], dtype="Int64"),
-         "ano_populacao": [2022], "pib": [1.0], "ano_pib": [2021]}
+        {
+            "cod_ibge": ["2927408"],
+            "nome": ["Salvador"],
+            "uf": ["BA"],
+            "populacao": pd.array([2417678], dtype="Int64"),
+            "ano_populacao": [2022],
+            "pib": [1.0],
+            "ano_pib": [2021],
+        }
     )
     validate(cfg_tmp, MUNICIPIO, ok, "municipio")
     assert _linhas(cfg_tmp, "validacoes")[-1]["status"] == "pass"

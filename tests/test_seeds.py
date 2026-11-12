@@ -25,9 +25,11 @@ def test_necessidade_usa_cenario_configurado(cfg_repo):
 
 
 def test_arquetipos_cumulativos(cfg_repo):
-    a = load(cfg_repo, "arquetipos").pivot_table(
-        index="porte", columns="tipo_leito", values="leitos", aggfunc="sum"
-    ).fillna(0)
+    a = (
+        load(cfg_repo, "arquetipos")
+        .pivot_table(index="porte", columns="tipo_leito", values="leitos", aggfunc="sum")
+        .fillna(0)
+    )
     assert a.loc[["H1", "H2", "H3", "H4"]].sum(axis=1).is_monotonic_increasing
     assert a.loc["H1", ["uti_adulto", "uti_neo_ped"]].sum() == 0 and a.loc["H2", "uti_adulto"] > 0
 

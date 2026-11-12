@@ -35,9 +35,7 @@ def _indices_globais(path_coords: str) -> list[int]:
     for par in path_coords.split(";"):
         lon, lat = (float(v) for v in par.split(","))
         achado = [
-            k
-            for k, (x, y) in enumerate(COORDS3)
-            if np.isclose(x, lon, atol=1e-9) and np.isclose(y, lat, atol=1e-9)
+            k for k, (x, y) in enumerate(COORDS3) if np.isclose(x, lon, atol=1e-9) and np.isclose(y, lat, atol=1e-9)
         ]
         assert len(achado) == 1, f"coordenada fora de COORDS3: {par}"
         out.append(achado[0])
