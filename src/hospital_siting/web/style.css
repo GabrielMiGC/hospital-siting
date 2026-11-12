@@ -1,0 +1,111 @@
+:root {
+  --fundo: #f5f3ee;
+  --painel: #ffffff;
+  --tinta: #1d2329;
+  --tinta-2: #5a6570;
+  --linha: #e2ded5;
+  --acento: #0f6e6a;      /* verde-petróleo: hospitais indicados */
+  --acento-2: #d7efec;
+  --alerta: #b4532a;
+  --descarte: #8a8f96;
+  --raio: 10px;
+  --sombra: 0 6px 24px rgba(29, 35, 41, .10);
+  --fonte: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #14181c; --painel: #1c2227; --tinta: #e9ecef; --tinta-2: #a2acb6; --linha: #2c343b;
+    --acento: #4fc1b8; --acento-2: #17312f; --sombra: 0 6px 24px rgba(0, 0, 0, .4);
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: grid; grid-template-columns: 360px 1fr; background: var(--fundo); color: var(--tinta);
+  font: 14px/1.45 var(--fonte);
+}
+a { color: var(--acento); }
+small { color: var(--tinta-2); font-weight: 400; }
+
+.lateral { overflow-y: auto; padding: 20px 20px 12px; border-right: 1px solid var(--linha); background: var(--painel); }
+.marca h1 { font-size: 20px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.01em; }
+.marca p { margin: 0 0 14px; color: var(--tinta-2); }
+.bloco { border-top: 1px solid var(--linha); padding: 14px 0 6px; }
+.bloco h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--tinta-2); margin: 0 0 10px; }
+.campo { display: block; margin: 0 0 14px; border: 0; padding: 0; }
+.rotulo { display: block; font-weight: 500; margin-bottom: 4px; }
+.rotulo small { display: block; font-size: 12px; }
+.linha { display: flex; align-items: center; gap: 10px; }
+.linha input { flex: 1; }
+.linha output { min-width: 64px; text-align: right; font: 500 13px var(--mono); }
+input[type=range] { accent-color: var(--acento); width: 100%; }
+.orcamento output { display: block; font: 600 28px/1.1 var(--fonte); color: var(--acento); margin: 2px 0 6px; letter-spacing: -.02em; }
+
+.portes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.porte { position: relative; }
+.porte input { position: absolute; opacity: 0; }
+.porte span {
+  display: block; padding: 6px 4px; border: 1px solid var(--linha); border-radius: 8px; text-align: center;
+  cursor: pointer; font-weight: 600; user-select: none;
+}
+.porte span small { display: block; font-weight: 400; font-size: 11px; }
+.porte input:checked + span { background: var(--acento-2); border-color: var(--acento); color: var(--acento); }
+.porte input:focus-visible + span { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.premissas summary { cursor: pointer; font-weight: 500; margin-bottom: 10px; }
+.discreto { background: none; border: 1px solid var(--linha); border-radius: 6px; padding: 4px 10px; color: var(--tinta-2); cursor: pointer; font: inherit; }
+.camadas label, .chave { display: block; margin: 3px 0; cursor: pointer; }
+.chave { margin-top: 8px; }
+.legenda { margin-top: 10px; font-size: 12px; color: var(--tinta-2); }
+.legenda .barra { height: 8px; border-radius: 4px; margin: 4px 0 2px; }
+.legenda .extremos { display: flex; justify-content: space-between; }
+.rodape { border-top: 1px solid var(--linha); padding-top: 10px; font-size: 12px; color: var(--tinta-2); }
+.rodape p { margin: 6px 0 0; }
+
+.palco { position: relative; min-height: 0; }
+#mapa { position: absolute; inset: 0; background: var(--fundo); }
+.explicacao, .indicacoes, .calculando {
+  position: absolute; z-index: 500; background: var(--painel); border-radius: var(--raio); box-shadow: var(--sombra);
+}
+.explicacao { top: 16px; left: 16px; max-width: 460px; padding: 14px 16px; }
+.explicacao p { margin: 6px 0 0; }
+.explicacao .meta { color: var(--tinta-2); font-size: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.kpi b { display: block; font: 600 20px/1.1 var(--fonte); letter-spacing: -.02em; }
+.kpi span { font-size: 12px; color: var(--tinta-2); }
+
+.indicacoes { top: 16px; right: 16px; bottom: 16px; width: 340px; padding: 14px 14px 10px; overflow-y: auto; }
+.indicacoes h2 { font-size: 15px; margin: 0 0 8px; }
+.indicacoes ol { list-style: none; margin: 0; padding: 0; }
+.cartao { border: 1px solid var(--linha); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.cartao:hover, .cartao.ativo { border-color: var(--acento); }
+.cartao h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+.selo { font: 600 11px var(--mono); background: var(--acento); color: var(--painel); border-radius: 4px; padding: 1px 6px; }
+.cartao .resumo { margin: 4px 0 0; color: var(--tinta-2); font-size: 12px; }
+.cartao .detalhe { display: none; margin-top: 8px; font-size: 12px; }
+.cartao.ativo .detalhe { display: block; }
+.detalhe table { width: 100%; border-collapse: collapse; }
+.detalhe td { padding: 2px 0; border-bottom: 1px dashed var(--linha); }
+.detalhe td:last-child { text-align: right; font-family: var(--mono); }
+.viab { height: 6px; background: var(--linha); border-radius: 3px; margin: 6px 0 2px; overflow: hidden; }
+.viab i { display: block; height: 100%; background: var(--acento); }
+.descarte { font-size: 12px; color: var(--tinta-2); margin: 4px 0; }
+.descarte b { color: var(--tinta); }
+
+.calculando { left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; display: flex; gap: 10px; align-items: center; }
+.calculando[hidden], .indicacoes[hidden] { display: none; }
+.girador { width: 16px; height: 16px; border: 2px solid var(--acento-2); border-top-color: var(--acento); border-radius: 50%; animation: gira .8s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+
+.leaflet-container { font: 13px var(--fonte); }
+.leaflet-popup-content { margin: 10px 12px; }
+.marcador-h { background: var(--acento); color: #fff; border: 2px solid #fff; border-radius: 50%; display: grid; place-items: center; font: 600 11px var(--mono); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+
+@media (max-width: 900px) {
+  body { grid-template-columns: 1fr; grid-template-rows: auto 70vh; }
+  .lateral { border-right: 0; border-bottom: 1px solid var(--linha); padding: 16px; }
+  .palco { grid-row: 2; }
+  .explicacao { left: 8px; right: 8px; max-width: none; top: 8px; }
+  .indicacoes { position: static; width: auto; margin: 8px; box-shadow: none; border: 1px solid var(--linha); }
+}

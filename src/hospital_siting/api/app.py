@@ -30,6 +30,7 @@ from hospital_siting.produto.otimizador import otimizar
 
 log = logging.getLogger("hospital_siting.api")
 WEB = Path(__file__).resolve().parents[1] / "web"
+COMO_FUNCIONA = Path(os.environ.get("HS_DOCS_DIR", Path(__file__).resolve().parents[3] / "docs")) / "como-funciona"
 CACHE_MAX = 256
 
 
@@ -150,6 +151,8 @@ def criar_app(gold: Gold | None = None, geojson: dict | None = None, precalcular
     def otimizar_rota(entrada: OtimizarEntrada) -> dict:
         return estado.resolver(entrada)
 
+    if COMO_FUNCIONA.exists():
+        app.mount("/como-funciona", StaticFiles(directory=COMO_FUNCIONA, html=True), name="como-funciona")
     if WEB.exists():
         app.mount("/", StaticFiles(directory=WEB, html=True), name="web")
     return app
