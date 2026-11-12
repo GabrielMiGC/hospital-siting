@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import pandas as pd
 
 from hospital_siting.core.parsing import parse_brl
@@ -20,8 +22,23 @@ def _codigo(valor: object, largura: int | None = None) -> str:
     return texto.zfill(largura) if largura else texto
 
 
-def salarios(rais_vinc: pd.DataFrame, cbos: list[str], cod_uf: str, ano: int) -> pd.DataFrame:
-    """Calcula a mediana da remuneração de dezembro por CBO na UF."""
+def descricoes_cbo(tabela: pd.DataFrame) -> dict[str, str]:
+    """Mapa código → título da ocupação a partir da tabela CBO do DATASUS (DBF/CBO.dbf: CBO, DS_CBO)."""
+    return {
+        _codigo(cbo, 6): str(ds).strip()
+        for cbo, ds in zip(tabela["CBO"], tabela["DS_CBO"], strict=True)
+        if str(ds).strip()
+    }
+
+
+def salarios(
+    rais_vinc: pd.DataFrame,
+    cbos: list[str],
+    cod_uf: str,
+    ano: int,
+    descricoes: Mapping[str, str] | None = None,
+) -> pd.DataFrame:
+    """Calcula a mediana da remuneração de dezembro por CBO na UF (normalizada a 40 h semanais)."""
     obrigatorias = {COL_MUNICIPIO, COL_CBO, COL_REMUNERACAO}
     if faltantes := obrigatorias - set(rais_vinc.columns):
         raise ValueError(f"microdados RAIS sem colunas: {sorted(faltantes)}")
@@ -40,16 +57,13 @@ def salarios(rais_vinc: pd.DataFrame, cbos: list[str], cod_uf: str, ano: int) ->
         dados = dados.loc[horas.gt(0)].copy()
         dados["_salario"] = dados["_salario"] * 40 / horas[horas.gt(0)]
 
-    descricoes = next(
-        (col for col in ("CBO Ocupação 2002 - Descrição", "Descrição CBO", "descricao") if col in dados),
-        None,
-    )
     agrupado = dados.groupby("_cbo", sort=True, as_index=False)["_salario"].median()
-    if descricoes:
-        mapa_descricao = dados.groupby("_cbo")[descricoes].first().astype(str)
-        descricao = agrupado["_cbo"].map(mapa_descricao)
-    else:
-        descricao = agrupado["_cbo"]
+    if descricoes is None:  # microdados da RAIS 2024 trazem só o código; a coluna existe em layouts antigos
+        col = next((c for c in ("CBO Ocupação 2002 - Descrição", "Descrição CBO", "descricao") if c in dados), None)
+        descricoes = dados.groupby("_cbo")[col].first().astype(str).to_dict() if col else {}
+    descricao = agrupado["_cbo"].map(descricoes)
+    if faltando := sorted(agrupado.loc[descricao.isna(), "_cbo"]):
+        raise ValueError(f"CBO sem descrição na tabela de ocupações: {faltando}")
 
     return pd.DataFrame(
         {

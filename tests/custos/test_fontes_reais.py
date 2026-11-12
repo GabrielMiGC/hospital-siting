@@ -9,12 +9,14 @@ from hospital_siting.schemas.silver import CUSTO_OBRA_M2
 
 
 def test_sinapi_de_sidra_usa_variavel_48_e_mes():
-    linhas = pd.DataFrame({
-        "V": ["1877.90", "1084.53", "1860.00", "..."],
-        "D1C": ["29"] * 4,
-        "D2C": ["48", "2119", "48", "48"],
-        "D3C": ["202609", "202609", "202608", "202607"],
-    })
+    linhas = pd.DataFrame(
+        {
+            "V": ["1877.90", "1084.53", "1860.00", "..."],
+            "D1C": ["29"] * 4,
+            "D2C": ["48", "2119", "48", "48"],
+            "D3C": ["202609", "202609", "202608", "202607"],
+        }
+    )
     out = de_sidra(linhas)
     assert out.mes.tolist() == ["2026-08", "2026-09"]
     assert out.valor_m2.tolist() == [1860.0, 1877.9]
@@ -48,7 +50,7 @@ def test_ler_vinculos_sem_colunas_falha(tmp_path):
 def test_ler_vinculos_layout_2024_virgula_e_ponto_decimal(tmp_path):
     arq = tmp_path / "RAIS_VINC_PUB_NORDESTE.COMT"
     cab = '"Bairros SP - Código","CBO 2002 Ocupação - Código","Município - Código","Vl Rem Dezembro Nom"'
-    linhas = ['999997,223505,292740,4500.50', '999997,223505,261160,9999.00', '999997,322205,291080,2200.00']
+    linhas = ["999997,223505,292740,4500.50", "999997,223505,261160,9999.00", "999997,322205,291080,2200.00"]
     arq.write_bytes(("\n".join([cab, *linhas]) + "\n").encode("latin-1"))
     out = ler_vinculos(arq, "29", ["223505", "322205"])
     assert list(out.columns) == ["CBO Ocupação 2002", "Município", "Vl Remun Dezembro Nom"]
@@ -63,7 +65,7 @@ def test_salario_normalizado_para_40h(tmp_path):
     linhas = ["225125,292740,4000.00,20", "225125,292740,7000.00,40", "225125,292740,9000.00,0"]
     arq.write_bytes(("\n".join([cab, *linhas]) + "\n").encode("latin-1"))
     vinc = ler_vinculos(arq, "29", ["225125"])
-    out = salarios(vinc, ["225125"], "29", 2024)
+    out = salarios(vinc, ["225125"], "29", 2024, descricoes={"225125": "Medico clinico"})
     assert out.salario_medio.item() == pytest.approx(7500.0)  # 4000@20h→8000, 7000@40h; 0h descartado
 
 

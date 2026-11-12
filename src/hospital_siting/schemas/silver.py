@@ -134,7 +134,7 @@ EQUIPAMENTO_AMBIENTE = DataFrameSchema(
 SALARIO_OCUPACAO = DataFrameSchema(
     {
         "cbo": Column(str, Check.str_matches(r"^\d{6}$"), unique=True),
-        "descricao": Column(str),
+        "descricao": Column(str, Check.str_matches(r".*[^\d\s].*")),  # título, não o código repetido
         "salario_medio": Column(float, POS),
         "ano": Column(int),
     },

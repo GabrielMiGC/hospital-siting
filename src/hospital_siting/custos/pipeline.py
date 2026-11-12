@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 import json
+import tempfile
+import zipfile
 from pathlib import Path
 
 import pandas as pd
 
 from hospital_siting.core.config import Config
 from hospital_siting.core.meta import record_run, record_validation
+from hospital_siting.core.parsing import read_dbf
 from hospital_siting.core.storage import bronze_path, fetch_to_raw, silver_path, write_parquet
 from hospital_siting.core.validation import validate, warn_if
 from hospital_siting.custos import cub, rais, renem, sinapi
 from hospital_siting.schemas.silver import CUSTO_OBRA_M2, EQUIPAMENTO_AMBIENTE, SALARIO_OCUPACAO
 
 RENEM_URL = "https://portalfns.saude.gov.br/idg_download/lista-renem/"
+# Tabelas auxiliares do SIH; DBF/CBO.dbf traz o título oficial de cada CBO 2002 (sem acentos, como no DATASUS)
+TAB_SIH_URL = "ftp://ftp.datasus.gov.br/dissemin/publicos/SIHSUS/200801_/Auxiliar/TAB_SIH.zip"
 AMBIENTES_OBRIGATORIOS = {
     "uti": ("uti", "terapia intensiva"),
     "centro cirúrgico": ("centro cirúrgico", "sala cirúrgica"),
@@ -113,6 +118,17 @@ def _rais(cfg: Config, cbos: list[str]) -> tuple[pd.DataFrame, int]:
     return vinc, ano
 
 
+def _descricoes_cbo(cfg: Config) -> dict[str, str]:
+    url = str(cfg.params.get("tab_sih_url", TAB_SIH_URL))
+    arq = fetch_to_raw(cfg, "datasus_aux", "tab_sih", url, "TAB_SIH.zip", max_idade_dias=180)
+    with zipfile.ZipFile(arq.path) as z, tempfile.TemporaryDirectory() as tmp:
+        nome = next(n for n in z.namelist() if n.lower().endswith("dbf/cbo.dbf"))
+        dbf = Path(tmp) / "CBO.dbf"
+        dbf.write_bytes(z.read(nome))
+        tabela = read_dbf(dbf)
+    return rais.descricoes_cbo(tabela)
+
+
 def run(cfg: Config) -> None:
     """Baixa as fontes reais e materializa as três silvers do domínio."""
     try:
@@ -130,7 +146,7 @@ def run(cfg: Config) -> None:
 
         equipe = _csv(cfg.seeds_dir / "dimensionamento_equipe.csv")
         vinculos, ano_rais = _rais(cfg, _cbos(equipe))
-        salarios = rais.salarios(vinculos, _cbos(equipe), cfg.cod_uf, ano_rais)
+        salarios = rais.salarios(vinculos, _cbos(equipe), cfg.cod_uf, ano_rais, _descricoes_cbo(cfg))
 
         custos = pd.concat([d for d in (custo_sinapi, custo_cub) if not d.empty], ignore_index=True)
         custos = validate(cfg, CUSTO_OBRA_M2, custos, "custo_obra_m2")
